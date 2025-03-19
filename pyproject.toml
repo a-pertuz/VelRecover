@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "velrecover"
+version = "1.0.0"
+description = "A tool for interpolating 2D seismic velocity data from sparse velocity analysis"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "GNU GPL-3.0"}
+authors = [
+    {name = "Alejandro Pertuz", email = "apertuz@ucm.es"}
+]
+
+dependencies = [
+    "pyside6>=6.8.0",
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "scipy>=1.10.0",
+    "opencv-python>=4.7.0",
+    "appdirs>=1.4.4",
+    "seisio>=1.2.0",
+    "setuptools>=65.0.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/a-pertuz/velrecover"
+"Bug Tracker" = "https://github.com/a-pertuz/velrecover/issues"
+
+
+[project.scripts]
+velrecover = "velrecover.__main__:main"
+
+[tool.setuptools]
+packages = ["velrecover", "velrecover.ui", "velrecover.core", "velrecover.utils"]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.package-data]
+"velrecover" = [
+    "examples/**/*",
+    "examples/SEGY/*.*", 
+    "examples/VELS/RAW/*.*", 
+    "examples/VELS/2D/*.*"
