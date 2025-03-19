@@ -1,4 +1,3 @@
-# debug_inseis.py
 import traceback
 import sys
 import os
