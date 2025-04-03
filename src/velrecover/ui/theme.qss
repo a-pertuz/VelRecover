@@ -298,7 +298,7 @@ QRadioButton:disabled {
 
 /* Navigation Toolbar styling */
 QToolBar {
-    background-color: #b9c3d0;
+    background-color: #ffe1e8f1;
     border: 1px solid #7c8a9c;
     border-radius: 6px;
     spacing: 3px;

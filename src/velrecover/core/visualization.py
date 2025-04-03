@@ -2,46 +2,93 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
 from ..ui.widgets import VelsFigureCanvas, VelScatterCanvas
 from ..utils.console_utils import (info_message, success_message, 
                            warning_message, summary_statistics)
 
-class VelocityAnalysisWindow(QMainWindow):
+class VelocityAnalysisWindow(QDialog):
     """Window for displaying velocity analysis results."""
     
     def __init__(self, parent=None, console=None):
         """Initialize velocity analysis window."""
         super().__init__(parent)
         self.console = console
-        self.setWindowTitle("Velocity Analysis")
+        self.setWindowTitle("Original Velocity Analysis")
+        
+        # Ensure dialog closes when parent closes
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        
+        # Set dialog to close when the main window closes
+        if parent:
+            self.setWindowFlags(self.windowFlags() | Qt.Dialog)
+        
         screen = QApplication.primaryScreen().geometry()
         screen_width = min(screen.width(), 1920)
         screen_height = min(screen.height(), 1080)
-        pos_x = int(screen_width * 0.35 + 10)
+        pos_x = int(screen_width * 0.3+10)
         pos_y = int(screen_height * 0.05)
         window_width= int(screen_width * 0.6)
-        window_height = int(screen_height * 0.9)
+        window_height = int(screen_height * 0.4)
         self.setGeometry(pos_x, pos_y, window_width, window_height)
         
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+        layout = QVBoxLayout(self)
         
         # Create canvas and toolbar
         self.vels_figure = VelsFigureCanvas(self)
         self.vels_toolbar = NavigationToolbar(self.vels_figure, self)
         
-        layout.addWidget(self.vels_toolbar)
+        # Add figure first, then toolbar below it
         layout.addWidget(self.vels_figure)
+        layout.addWidget(self.vels_toolbar)
         
         if self.console:
-            info_message(self.console, "Velocity Analysis window initialized")
+            info_message(self.console, "Original Velocity Analysis window initialized")
             info_message(self.console, f"Window dimensions: {window_width}x{window_height} at position ({pos_x}, {pos_y})")
 
-class VelocityDistributionWindow(QMainWindow):
+class SmoothedVelocityAnalysisWindow(QDialog):
+    """Window for displaying smoothed velocity analysis results."""
+    
+    def __init__(self, parent=None, console=None):
+        """Initialize smoothed velocity analysis window."""
+        super().__init__(parent)
+        self.console = console
+        self.setWindowTitle("Smoothed Velocity Analysis")
+        
+        # Ensure dialog closes when parent closes
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        
+        # Set dialog to close when the main window closes
+        if parent:
+            self.setWindowFlags(self.windowFlags() | Qt.Dialog)
+        
+        screen = QApplication.primaryScreen().geometry()
+        screen_width = min(screen.width(), 1920)
+        screen_height = min(screen.height(), 1080)
+        pos_x = int(screen_width * 0.3+10)
+        pos_y = int(screen_height * 0.5) 
+        window_width= int(screen_width * 0.6)
+        window_height = int(screen_height * 0.4)
+        self.setGeometry(pos_x, pos_y, window_width, window_height)
+        
+        layout = QVBoxLayout(self)
+        
+        # Create canvas and toolbar
+        self.vels_figure = VelsFigureCanvas(self)
+        self.vels_toolbar = NavigationToolbar(self.vels_figure, self)
+        
+        # Add figure first, then toolbar below it
+        layout.addWidget(self.vels_figure)
+        layout.addWidget(self.vels_toolbar)
+        
+        if self.console:
+            info_message(self.console, "Smoothed Velocity Analysis window initialized")
+            info_message(self.console, f"Window dimensions: {window_width}x{window_height} at position ({pos_x}, {pos_y})")
+
+class VelocityDistributionWindow(QDialog):
     """Window for displaying velocity distribution."""
     
     def __init__(self, parent=None, console=None):
@@ -49,6 +96,14 @@ class VelocityDistributionWindow(QMainWindow):
         super().__init__(parent)
         self.console = console
         self.setWindowTitle("Distribution of Velocities")
+        
+        # Ensure dialog closes when parent closes
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        
+        # Set dialog to close when the main window closes
+        if parent:
+            self.setWindowFlags(self.windowFlags() | Qt.Dialog)
+        
         screen = QApplication.primaryScreen().geometry()
         screen_width = min(screen.width(), 1920)
         screen_height = min(screen.height(), 1080)
@@ -58,17 +113,15 @@ class VelocityDistributionWindow(QMainWindow):
         window_height = int(screen_height * 0.6)
         self.setGeometry(pos_x, pos_y, window_width, window_height)
     
-        
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+        layout = QVBoxLayout(self)
         
         # Create canvas and toolbar
         self.scatter_canvas = VelScatterCanvas(self)
         self.scatter_toolbar = NavigationToolbar(self.scatter_canvas, self)
         
-        layout.addWidget(self.scatter_toolbar)
+        # Add figure first, then toolbar below it
         layout.addWidget(self.scatter_canvas)
+        layout.addWidget(self.scatter_toolbar)
         
         if self.console:
             info_message(self.console, "Velocity Distribution window initialized")
@@ -92,21 +145,34 @@ def display_velocity_analysis(canvas, cdp_grid, twt_grid, vel_grid, cdp, twt, ve
 
     # Add labels with velocity values
     for i, label_vel in enumerate(vel):
-        canvas.ax.annotate(f'{label_vel:.0f}', (cdp[i], twt[i]), va='center', ha='center', fontsize='8')
+        canvas.ax.annotate(f'{label_vel:.0f}', (cdp[i], twt[i]), va='center', ha='center', fontsize='6')
 
     # Add colorbar
     cbar = canvas.figure.colorbar(contour, ax=canvas.ax, orientation='vertical', extend='both', label='Velocity (m/s)')
     cbar.ax.invert_yaxis()  # Invert the direction of the ticks
 
     # Set axis limits and labels
-    canvas.ax.set_xlim(-50, ntraces + 50)
-    canvas.ax.set_xticks(range(0, ntraces, 50))
-    canvas.ax.set_xticks(list(canvas.ax.get_xticks()) + [ntraces])
+    canvas.ax.set_xlim(0, ntraces)
+    
+    # Use fewer ticks to avoid overlap
+    tick_spacing = max(50, ntraces // 10)  # Ensure reasonable spacing
+    tick_positions = list(range(0, ntraces, tick_spacing))
+    
+    # Add the last tick at ntraces
+    if ntraces not in tick_positions:
+        tick_positions.append(ntraces)
+    
+    canvas.ax.set_xticks(tick_positions)
+    
+    # Rotate labels to avoid overlap
+    canvas.ax.tick_params(axis='x', rotation=45)
 
     canvas.ax.set_xlabel('CDP')
     canvas.ax.set_ylabel('TWT (ms)')
     canvas.ax.set_title('Interpolated Velocity Analysis')
     canvas.ax.invert_yaxis()
+    
+    canvas.figure.tight_layout()
     canvas.draw()
     
     if console:
@@ -116,7 +182,7 @@ def display_velocity_analysis(canvas, cdp_grid, twt_grid, vel_grid, cdp, twt, ve
         stats = {
             "CDP Range": f"{int(min(cdp))} to {int(max(cdp))}",
             "TWT Range (ms)": f"{min(twt):.1f} to {max(twt):.1f}",
-            "Velocity Range (m/s)": f"{min(vel):.1f} to {max(vel):.1f}",
+            "Velocity Range (m/s)": f"{min(vel)::.1f} to {max(vel)::.1f}",
             "Number of picks": len(cdp),
             "Number of traces": ntraces
         }
@@ -168,14 +234,14 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None):
 
     # Set aspect ratio and axis limits
     canvas.ax.set_aspect(2)
-    canvas.ax.set_xlim(min(vel) * 0.9, max(vel) * 1.1)
-    canvas.ax.set_ylim(0, max(twt) * 1.1)
+    canvas.ax.set_xlim(min(vel), max(vel))
+    canvas.ax.set_ylim(0, max(twt))
 
     # Add legend
     canvas.ax.legend(title='CDP', loc='upper left', bbox_to_anchor=(1.05, 1), borderaxespad=0.)
     
-    # Adjust layout and redraw
-    canvas.figure.tight_layout(pad=5.0)
+    # Apply tight layout before drawing
+    canvas.figure.tight_layout()
     canvas.draw()
     
     if console:
@@ -183,10 +249,10 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None):
         
         vel_stats = {
             "CDP Count": len(unique_cdps),
-            "Min Velocity": f"{min(vel):.1f} m/s",
-            "Max Velocity": f"{max(vel):.1f} m/s",
-            "Avg Velocity": f"{np.mean(vel):.1f} m/s",
-            "Min TWT": f"{min(twt):.1f} ms",
-            "Max TWT": f"{max(twt):.1f} ms"
+            "Min Velocity": f"{min(vel)::.1f} m/s",
+            "Max Velocity": f"{max(vel)::.1f} m/s",
+            "Avg Velocity": f"{np.mean(vel)::.1f} m/s",
+            "Min TWT": f"{min(twt)::.1f} ms",
+            "Max TWT": f"{max(twt)::.1f} ms"
         }
         summary_statistics(console, vel_stats)

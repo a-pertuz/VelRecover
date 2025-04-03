@@ -32,7 +32,7 @@ def main():
     pos_x = int(screen_width * 0.05)
     pos_y = int(screen_height * 0.05)
     window_width= int(screen_width * 0.25)
-    window_height = int(screen_height * 0.9)
+    window_height = int(screen_height * 0.85)
     window.setGeometry(pos_x, pos_y, window_width, window_height)
     
     window.show()

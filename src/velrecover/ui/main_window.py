@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (QApplication,
 
 from .widgets import ProgressStatusBar
 from .dialogs import FirstRunDialog, AboutDialog, HelpDialog
-from ..core.visualization import VelocityAnalysisWindow, VelocityDistributionWindow, display_velocity_analysis, plot_velocity_distribution
+from ..core.visualization import (VelocityAnalysisWindow, SmoothedVelocityAnalysisWindow, 
+                                VelocityDistributionWindow, display_velocity_analysis, plot_velocity_distribution)
 from ..core.interpolation import interpolate_velocity_data, apply_gaussian_blur
 from ..utils.save_functions import (save_velocity_text_data, save_velocity_binary_data)
 from ..utils.resource_utils import copy_tutorial_files
@@ -37,8 +38,10 @@ class VelRecover2D(QMainWindow):
         # Create console widget first so it can be used for logging
         self.setup_console()
         
-        self.analysis_window = VelocityAnalysisWindow(console=self.console)
-        self.distribution_window = VelocityDistributionWindow(console=self.console)
+        # Initialize dialog windows with self as parent
+        self.analysis_window = VelocityAnalysisWindow(parent=self, console=self.console)
+        self.smoothed_analysis_window = SmoothedVelocityAnalysisWindow(parent=self, console=self.console)
+        self.distribution_window = VelocityDistributionWindow(parent=self, console=self.console)
         
         # Get appropriate directories for user data and config
         self.app_name = "velrecover"
@@ -483,9 +486,12 @@ class VelRecover2D(QMainWindow):
             self.TWT_grid = result['TWT_grid']
             self.VEL_grid = result['VEL_grid']
             self.ntraces = result['ntraces']
-            self.output_2D_grid = self.VEL_grid
             
-            # Display the results
+            # Store both original and output grids (they start the same)
+            self.original_VEL_grid = self.VEL_grid.copy()
+            self.output_2D_grid = self.VEL_grid.copy()
+            
+            # Display the results in both windows
             self.display_velocity_analysis()
             
             self.status_bar.update(100, "Interpolation completed successfully")
@@ -497,42 +503,39 @@ class VelRecover2D(QMainWindow):
             self._finalize_interpolation(error=True)
     
     def display_velocity_analysis(self):
-        """Display the interpolated velocity data in the analysis window."""
+        """Display the interpolated velocity data in both analysis windows."""
         
         self.status_bar.update(90, "Creating visualization...")
+        
+        # Display in original window
         display_velocity_analysis(
             self.analysis_window.vels_figure, 
             self.CDP_grid, 
             self.TWT_grid, 
-            self.VEL_grid,
+            self.original_VEL_grid,
             self.CDP,
             self.TWT,
             self.VEL,
             self.ntraces
         )
         
-        # Show the window
+        # Display the same data in smoothed window initially
+        display_velocity_analysis(
+            self.smoothed_analysis_window.vels_figure, 
+            self.CDP_grid, 
+            self.TWT_grid, 
+            self.output_2D_grid,
+            self.CDP,
+            self.TWT,
+            self.VEL,
+            self.ntraces
+        )
+        
+        # Show both windows
         self.analysis_window.show()
+        self.smoothed_analysis_window.show()
         self.analysis_window.raise_()
         self.analysis_window.activateWindow()
-    
-    def _finalize_interpolation(self, cancelled=False, error=False):
-        """Clean up after interpolation process."""
-        self.is_interpolating = False
-        self.interpolate2D_button.setEnabled(True)
-        
-        if cancelled:
-            self.status_bar.showMessage("Interpolation cancelled")
-            self.console.append("Interpolation process was cancelled by the user")
-        elif error:
-            pass  # Error message already displayed
-        else:
-            self.save_data_button.setEnabled(True)
-            self.save_data_bin_button.setEnabled(True)
-            self.apply_blur_button.setEnabled(True)
-            self.console.append("Interpolation completed. You can now apply Gaussian blur or save the data.")
-        
-        self.status_bar.finish()
     
     def apply_gaussian_blur(self):
         """Apply Gaussian blur to the interpolated velocity data."""
@@ -540,9 +543,9 @@ class VelRecover2D(QMainWindow):
         blur_value = int(self.blur_value_input.text())
         self.output_2D_grid = apply_gaussian_blur(self.VEL_grid, blur_value)
         
-        # Update visualization
+        # Update only the smoothed visualization window
         display_velocity_analysis(
-            self.analysis_window.vels_figure, 
+            self.smoothed_analysis_window.vels_figure, 
             self.CDP_grid, 
             self.TWT_grid, 
             self.output_2D_grid,
@@ -552,6 +555,12 @@ class VelRecover2D(QMainWindow):
             self.ntraces,
             clear_figure=True
         )
+        
+        # Update the window title to reflect smoothing applied
+        self.smoothed_analysis_window.setWindowTitle(f"Smoothed Velocity Analysis (Gaussian Blur: {blur_value})")
+        
+        # Log the action
+        info_message(self.console, f"Applied Gaussian blur with value {blur_value} to smoothed window")
     
     def save_vel2D_data_txt(self):
         """Save the velocity data to a .dat file."""        
@@ -559,7 +568,7 @@ class VelRecover2D(QMainWindow):
             self.segy_file_path,
             self.CDP_grid,
             self.TWT_grid,
-            self.output_2D_grid,
+            self.output_2D_grid,  # Use the potentially smoothed data
             self.vels_dir
         )
         
@@ -573,7 +582,7 @@ class VelRecover2D(QMainWindow):
         
         result = save_velocity_binary_data(
             self.segy_file_path,
-            self.output_2D_grid,
+            self.output_2D_grid,  # Use the potentially smoothed data
             self.vels_dir
         )
         
@@ -705,6 +714,7 @@ class VelRecover2D(QMainWindow):
         if reply == QMessageBox.Yes:
             # Close all popup windows
             self.analysis_window.hide()
+            self.smoothed_analysis_window.hide()
             self.distribution_window.hide()
             
             # Call the existing reset method
@@ -723,11 +733,18 @@ class VelRecover2D(QMainWindow):
         # Reset figures
         if hasattr(self, 'output_2D_grid'):
             del self.output_2D_grid
+        if hasattr(self, 'original_VEL_grid'):
+            del self.original_VEL_grid
             
-        # Reset analysis window
+        # Reset analysis windows
         if hasattr(self.analysis_window, 'vels_figure'):
             self.analysis_window.vels_figure.ax.clear()
             self.analysis_window.vels_figure.draw()
+        
+        if hasattr(self.smoothed_analysis_window, 'vels_figure'):
+            self.smoothed_analysis_window.vels_figure.ax.clear()
+            self.smoothed_analysis_window.vels_figure.draw()
+            self.smoothed_analysis_window.setWindowTitle("Smoothed Velocity Analysis")
             
         # Reset distribution window
         if hasattr(self.distribution_window, 'scatter_canvas'):
@@ -736,6 +753,7 @@ class VelRecover2D(QMainWindow):
         
         # Hide windows
         self.analysis_window.hide()
+        self.smoothed_analysis_window.hide()
         self.distribution_window.hide()
         
         # Disable buttons
@@ -756,4 +774,22 @@ class VelRecover2D(QMainWindow):
         
         # Clear status bar
         self.status_bar.showMessage("")
+        self.status_bar.finish()
+    
+    def _finalize_interpolation(self, cancelled=False, error=False):
+        """Clean up after interpolation process."""
+        self.is_interpolating = False
+        self.interpolate2D_button.setEnabled(True)
+        
+        if cancelled:
+            self.status_bar.showMessage("Interpolation cancelled")
+            self.console.append("Interpolation process was cancelled by the user")
+        elif error:
+            pass  # Error message already displayed
+        else:
+            self.save_data_button.setEnabled(True)
+            self.save_data_bin_button.setEnabled(True)
+            self.apply_blur_button.setEnabled(True)
+            self.console.append("Interpolation completed. You can now apply Gaussian blur or save the data.")
+        
         self.status_bar.finish()
