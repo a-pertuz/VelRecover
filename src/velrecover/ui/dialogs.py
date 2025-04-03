@@ -1,6 +1,6 @@
 """Dialogs for the velrecover application."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 import os
 from PySide6.QtWidgets import (

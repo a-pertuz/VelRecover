@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "velrecover"
-version = "1.0.0"
+version = "1.1.0"
 description = "A tool for interpolating 2D seismic velocity data from sparse velocity analysis"
 readme = "README.md"
 requires-python = ">=3.10"
