@@ -11,16 +11,6 @@ from PySide6.QtWidgets import QStyle
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-class VelsFigureCanvas(FigureCanvas):
-    """Canvas for displaying velocity figures."""
-    
-    def __init__(self, parent=None, fc='none'):
-        """Initialize canvas with a figure."""
-        fig = Figure(facecolor=fc)
-        self.ax = fig.add_subplot(111)
-        super().__init__(fig)
-        self.setParent(parent)
-
 class VelScatterCanvas(FigureCanvas):
     """Canvas for displaying velocity scatter plots."""
     

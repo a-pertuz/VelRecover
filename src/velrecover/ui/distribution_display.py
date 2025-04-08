@@ -1,0 +1,229 @@
+"""Module for velocity distribution visualization."""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from PySide6.QtWidgets import QDialog, QVBoxLayout, QApplication
+from PySide6.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
+from .widgets import VelScatterCanvas
+from ..utils.console_utils import info_message, warning_message, success_message, summary_statistics
+
+class VelocityDistributionWindow(QDialog):
+    """Window for displaying velocity distribution."""
+    
+    def __init__(self, parent=None, console=None):
+        """Initialize velocity distribution window."""
+        super().__init__(parent)
+        self.console = console
+        self.setWindowTitle("Distribution of Velocities")
+        
+        # Don't automatically delete the window when closed
+        # This allows the window to be hidden and shown again
+        self.setAttribute(Qt.WA_DeleteOnClose, False)
+        
+        # Set dialog to close when the main window closes
+        if parent:
+            self.setWindowFlags(self.windowFlags() | Qt.Dialog)
+        
+        screen = QApplication.primaryScreen().geometry()
+        screen_width = min(screen.width(), 1920)
+        screen_height = min(screen.height(), 1080)
+        pos_x = int(screen_width * 0.35 + 10)
+        pos_y = int(screen_height * 0.1)
+        window_width= int(screen_width * 0.4)
+        window_height = int(screen_height * 0.6)
+        self.setGeometry(pos_x, pos_y, window_width, window_height)
+    
+        layout = QVBoxLayout(self)
+        
+        # Create canvas and toolbar
+        self.scatter_canvas = VelScatterCanvas(self)
+        self.scatter_toolbar = NavigationToolbar(self.scatter_canvas, self)
+        
+        # Add figure first, then toolbar below it
+        layout.addWidget(self.scatter_canvas)
+        layout.addWidget(self.scatter_toolbar)
+        
+        if self.console:
+            info_message(self.console, "Velocity Distribution window initialized")
+            info_message(self.console, f"Window dimensions: {window_width}x{window_height} at position ({pos_x}, {pos_y})")
+
+def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=None, regression_params=None):
+    """Plot velocity distribution in the given canvas."""
+    if console:
+        info_message(console, "Generating velocity distribution plot...")
+    
+    # Clear the figure completely to avoid artifacts
+    canvas.figure.clear()
+    canvas.ax = canvas.figure.add_subplot(111)
+
+    # Check if the data is not empty
+    if len(vel) == 0 or len(twt) == 0:
+        if console:
+            warning_message(console, "No velocity data to display")
+        return
+
+    # Get unique CDP values and assign colors
+    unique_cdps = np.unique(cdp)
+    colors = plt.cm.jet(np.linspace(0, 1, len(unique_cdps)))
+    
+    # Plot scatter for each CDP
+    for cdp_val, color in zip(unique_cdps, colors):
+        mask = cdp == cdp_val
+        velocities = vel[mask]
+        twts = twt[mask]
+        
+        # Plot the scatter points
+        canvas.ax.scatter(
+            velocities, 
+            twts, 
+            color=color, 
+            label=f'{int(cdp_val)}',
+            s=50,  # Larger marker size
+            edgecolor='black',
+            linewidth=0.8,
+            alpha=0.5,
+            zorder=10
+        )
+
+        # Plot dashed line connecting the points
+        sorted_indices = np.argsort(twts)  # Sort by TWT for better connection
+        canvas.ax.plot(
+            velocities[sorted_indices],
+            twts[sorted_indices],
+            color=color,
+            linestyle='--',
+            linewidth=1.5,
+            alpha=0.5,
+            zorder=5
+        )
+
+    # Add regression lines if parameters are provided
+    if regression_params:
+        # Range for velocity values
+        vel_range = max(vel) - min(vel)
+        vel_min = min(vel) - vel_range * 0.05
+        vel_max = max(vel) + vel_range * 0.05
+        vel_points = np.linspace(vel_min, vel_max, 100)
+        
+        # Linear regression
+        if 'linear' in regression_params:
+            linear_params = regression_params['linear']
+            v0 = linear_params['v0']
+            k = linear_params['k']
+            r2 = linear_params.get('r2', 0)
+            
+            # Calculate TWT values for each velocity point using the inverse of the linear model
+            twt_linear = [(v - v0) / k if k != 0 else 0 for v in vel_points]
+            
+            # Only plot within reasonable TWT range
+            valid_mask = np.logical_and(np.array(twt_linear) >= 0, np.array(twt_linear) <= max(twt) * 1.1)
+            if np.any(valid_mask):
+                canvas.ax.plot(
+                    np.array(vel_points)[valid_mask], 
+                    np.array(twt_linear)[valid_mask], 
+                    'r-', 
+                    linewidth=2, 
+                    label=f'Linear: V = {v0:.1f} + {k:.3f}·TWT \n (R²: {r2:.3f})',
+                    zorder=15
+                )
+        
+        # Logarithmic regression
+        if 'logarithmic' in regression_params:
+            log_params = regression_params['logarithmic']
+            v0 = log_params['v0']
+            k = log_params['k']
+            r2 = log_params.get('r2', 0)
+            
+            # Calculate TWT values for each velocity point using the inverse of the logarithmic model
+            twt_log = [np.exp((v - v0) / k) if k != 0 else 0 for v in vel_points]
+            
+            # Only plot within reasonable TWT range
+            valid_mask = np.logical_and(np.array(twt_log) >= 0, np.array(twt_log) <= max(twt) * 1.1)
+            if np.any(valid_mask):
+                canvas.ax.plot(
+                    np.array(vel_points)[valid_mask], 
+                    np.array(twt_log)[valid_mask], 
+                    'g-', 
+                    linewidth=2, 
+                    label=f'Log: V = {v0:.1f} + {k:.1f}·ln(TWT) \n (R²: {r2:.3f})',
+                    zorder=15
+                )
+
+    # Add moving average trend line 
+    if len(vel) > 5:  # Only if we have sufficient data points
+        # Sort all points by TWT
+        sorted_indices = np.argsort(twt)
+        twt_sorted = twt[sorted_indices]
+        vel_sorted = vel[sorted_indices]
+        
+        # Default window size if not provided
+        if window_size is None:
+            window_size = max(5, len(vel) // 10)  # At least 5 points or 10% of data
+            
+        # Compute moving average
+        ma_vel = []
+        ma_twt = []
+        
+        # Use a sliding window to compute moving average
+        for i in range(len(twt_sorted) - window_size + 1):
+            window_vel = vel_sorted[i:i + window_size]
+            window_twt = twt_sorted[i:i + window_size]
+            ma_vel.append(np.mean(window_vel))
+            ma_twt.append(np.mean(window_twt))
+        
+        # Plot the moving average trend line
+        canvas.ax.plot(
+            ma_vel, 
+            ma_twt, 
+            'k--',  
+            linewidth=2,
+            label=f'Moving Average)',
+            zorder=20
+        )
+
+    # Set labels and title
+    canvas.ax.set_xlabel('Velocity (m/s)', fontsize=10, fontweight='bold')
+    canvas.ax.set_ylabel('TWT (ms)', fontsize=10, fontweight='bold')
+    canvas.ax.set_title('Velocity Distribution by CDP', fontsize=12, fontweight='bold')
+
+    # Set axis limits with better padding
+    vel_range = max(vel) - min(vel)
+    twt_range = max(twt) - min(twt)
+    
+    canvas.ax.set_xlim(min(vel) - vel_range*0.05, max(vel) + vel_range*0.05)
+    canvas.ax.set_ylim(0, max(twt) * 1.05)  # Start from 0 with a little padding at the top
+    canvas.ax.invert_yaxis()  # Invert Y axis for consistency with velocity analysis
+
+    # Always include all CDPs in the legend, no sampling
+    canvas.ax.legend(
+        title='CDP', 
+        loc='upper left', 
+        bbox_to_anchor=(1.05, 1),
+        borderaxespad=0.,
+        frameon=True,
+        fancybox=True,
+        shadow=True,
+        fontsize=9
+    )
+    
+    # Add grid for better readability
+    canvas.ax.grid(True, linestyle='--', alpha=0.3)
+    
+    # Apply tight layout before drawing
+    canvas.figure.tight_layout()
+    canvas.draw()
+    
+    if console:
+        success_message(console, "Velocity distribution plot generated successfully")
+        
+        vel_stats = {
+            "CDP Count": len(unique_cdps),
+            "Min Velocity": f"{min(vel):.1f} m/s",
+            "Max Velocity": f"{max(vel):.1f} m/s",
+            "Avg Velocity": f"{np.mean(vel):.1f} m/s",
+            "Min TWT": f"{min(twt):.1f} ms",
+            "Max TWT": f"{max(twt):.1f} ms"
+        }
+        summary_statistics(console, vel_stats)

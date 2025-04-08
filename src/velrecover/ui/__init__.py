@@ -1,7 +1,33 @@
-"""User interface components for SEGYRecover."""
+"""User interface components for VelRecover."""
 
+# UI components
 from .widgets import ProgressStatusBar
-from ..core.visualization import (VelocityAnalysisWindow, SmoothedVelocityAnalysisWindow, 
-                               VelocityDistributionWindow, display_velocity_analysis, plot_velocity_distribution)
-from ..core.interpolation import interpolate_velocity_data, apply_gaussian_blur
-from ..utils.save_functions import (save_velocity_text_data, save_velocity_binary_data)
+from .dialogs import (
+    FirstRunDialog, 
+    AboutDialog, 
+    HelpDialog, 
+    ModelSelectionDialog, 
+    CustomLinearModelDialog
+)
+
+# Distribution visualization
+from .distribution_display import (
+    VelocityDistributionWindow,
+    plot_velocity_distribution
+)
+
+# SEGY visualization
+from .segy_display import SegyDisplayWindow
+
+__all__ = [
+    # UI components
+    'ProgressStatusBar', 
+    'FirstRunDialog', 'AboutDialog', 'HelpDialog',
+    'ModelSelectionDialog', 'CustomLinearModelDialog',
+    
+    # Distribution visualization
+    'VelocityDistributionWindow', 'plot_velocity_distribution',
+    
+    # SEGY visualization
+    'SegyDisplayWindow'
+]

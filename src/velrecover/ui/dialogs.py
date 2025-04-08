@@ -6,11 +6,11 @@ import os
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QGroupBox, QRadioButton, QButtonGroup,
-    QFileDialog, QScrollArea, QWidget
+    QFileDialog, QScrollArea, QWidget, QDialogButtonBox, QLineEdit
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication, QDialogButtonBox
+from PySide6.QtGui import QFont, QDoubleValidator
+from PySide6.QtWidgets import QApplication, QDialogButtonBox, QMessageBox
 
 class FirstRunDialog(QDialog):
     """Dialog shown on first run to configure application settings."""
@@ -324,3 +324,320 @@ class HelpDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.Ok)
         buttons.accepted.connect(self.accept)
         layout.addWidget(buttons)
+
+class CustomLinearModelDialog(QDialog):
+    """Dialog for entering custom linear velocity model parameters."""
+    
+    def __init__(self, parent=None):
+        """Initialize the dialog."""
+        super().__init__(parent)
+        
+        # Set dialog properties
+        self.setWindowTitle("Custom Linear Model Parameters")
+        self.setMinimumWidth(350)
+        self.setModal(True)
+        
+        # Setup UI
+        self.setup_ui()
+    
+    def setup_ui(self):
+        """Set up the user interface."""
+        layout = QVBoxLayout(self)
+        
+        # Add title
+        title = QLabel("Enter Linear Model Parameters")
+        title.setFont(QFont("Arial", 12, QFont.Bold))
+        layout.addWidget(title)
+        
+        # Add explanation
+        description = QLabel(
+            "Enter parameters for the linear velocity model:\nV = V₀ + k·TWT"
+        )
+        description.setAlignment(Qt.AlignCenter)
+        layout.addWidget(description)
+        layout.addSpacing(10)
+        
+        # Parameters form
+        form_layout = QVBoxLayout()
+        
+        # V₀ parameter
+        v0_layout = QHBoxLayout()
+        v0_label = QLabel("V₀ (initial velocity in m/s):", self)
+        self.v0_input = QLineEdit(self)
+        self.v0_input.setText("1500")  # Default value
+        self.v0_input.setValidator(QDoubleValidator(0, 10000, 2))
+        v0_layout.addWidget(v0_label)
+        v0_layout.addWidget(self.v0_input)
+        form_layout.addLayout(v0_layout)
+        
+        # k parameter
+        k_layout = QHBoxLayout()
+        k_label = QLabel("k (velocity gradient):", self)
+        self.k_input = QLineEdit(self)
+        self.k_input.setText("0.5")  # Default value
+        
+        # Use a double validator with 6 decimals to allow small values
+        k_validator = QDoubleValidator(0.0, 100.0, 6)
+        k_validator.setNotation(QDoubleValidator.StandardNotation)  # Force standard notation
+        self.k_input.setValidator(k_validator)
+        
+        k_layout.addWidget(k_label)
+        k_layout.addWidget(self.k_input)
+        form_layout.addLayout(k_layout)
+        
+        layout.addLayout(form_layout)
+        
+        # Add explanation of parameters
+        explanation = QLabel(
+            "• V₀: Initial velocity at zero TWT (typically 1500-2000 m/s)\n"
+            "• k: Velocity gradient (typically 0.2-1.0)\n"
+            "  Small k values (e.g., 0.01) produce a gentle slope"
+        )
+        explanation.setStyleSheet("font-size: 10px; color: #555;")
+        layout.addWidget(explanation)
+        
+        layout.addSpacing(10)
+        
+        # Add buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def get_parameters(self):
+        """Return the entered parameters."""
+        try:
+            v0 = float(self.v0_input.text())
+            k = float(self.k_input.text())
+            return v0, k
+        except ValueError:
+            return 1500, 0.5  # Default values in case of parse error
+
+class CustomLogarithmicModelDialog(QDialog):
+    """Dialog for entering custom logarithmic velocity model parameters."""
+    
+    def __init__(self, parent=None):
+        """Initialize the dialog."""
+        super().__init__(parent)
+        
+        # Set dialog properties
+        self.setWindowTitle("Custom Logarithmic Model Parameters")
+        self.setMinimumWidth(350)
+        self.setModal(True)
+        
+        # Setup UI
+        self.setup_ui()
+    
+    def setup_ui(self):
+        """Set up the user interface."""
+        layout = QVBoxLayout(self)
+        
+        # Add title
+        title = QLabel("Enter Logarithmic Model Parameters")
+        title.setFont(QFont("Arial", 12, QFont.Bold))
+        layout.addWidget(title)
+        
+        # Add explanation
+        description = QLabel(
+            "Enter parameters for the logarithmic velocity model:\nV = V₀ + k·ln(TWT)"
+        )
+        description.setAlignment(Qt.AlignCenter)
+        layout.addWidget(description)
+        layout.addSpacing(10)
+        
+        # Parameters form
+        form_layout = QVBoxLayout()
+        
+        # V₀ parameter
+        v0_layout = QHBoxLayout()
+        v0_label = QLabel("V₀ (initial velocity in m/s):", self)
+        self.v0_input = QLineEdit(self)
+        self.v0_input.setText("1500")  # Default value
+        self.v0_input.setValidator(QDoubleValidator(0, 10000, 2))
+        v0_layout.addWidget(v0_label)
+        v0_layout.addWidget(self.v0_input)
+        form_layout.addLayout(v0_layout)
+        
+        # k parameter
+        k_layout = QHBoxLayout()
+        k_label = QLabel("k (logarithmic scaling factor):", self)
+        self.k_input = QLineEdit(self)
+        self.k_input.setText("1000")  # Default value
+        
+        # Use a double validator with 1 decimal places
+        k_validator = QDoubleValidator(0.0, 10000.0, 1)
+        k_validator.setNotation(QDoubleValidator.StandardNotation)  # Force standard notation
+        self.k_input.setValidator(k_validator)
+        
+        k_layout.addWidget(k_label)
+        k_layout.addWidget(self.k_input)
+        form_layout.addLayout(k_layout)
+        
+        layout.addLayout(form_layout)
+        
+        # Add explanation of parameters
+        explanation = QLabel(
+            "• V₀: Initial velocity at theoretical zero TWT (typically 1500-2000 m/s)\n"
+            "• k: Logarithmic scaling factor (typically 500-2000)\n"
+            "  Higher k values produce steeper velocity increases with depth"
+        )
+        explanation.setStyleSheet("font-size: 10px; color: #555;")
+        layout.addWidget(explanation)
+        
+        layout.addSpacing(10)
+        
+        # Add buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def get_parameters(self):
+        """Return the entered parameters."""
+        try:
+            v0 = float(self.v0_input.text())
+            k = float(self.k_input.text())
+            return v0, k
+        except ValueError:
+            return 1500, 1000  # Default values in case of parse error
+
+class ModelSelectionDialog(QDialog):
+    """Dialog for selecting the interpolation method for velocity data."""
+    
+    def __init__(self, parent=None, already_interpolated=False):
+        """Initialize the dialog with interpolation method selection options."""
+        super().__init__(parent)
+        
+        # Set dialog properties
+        self.setWindowTitle("Select Interpolation Method")
+        self.setMinimumWidth(500)
+        self.setModal(True)
+        
+        # Track if data was already interpolated
+        self.already_interpolated = already_interpolated
+        
+        # Setup UI
+        self.setup_ui()
+    
+    def setup_ui(self):
+        """Set up the user interface."""
+        layout = QVBoxLayout(self)
+        
+        # Add title
+        title = QLabel("Select Interpolation Method")
+        title.setFont(QFont("Arial", 12, QFont.Bold))
+        layout.addWidget(title)
+        
+        # Add description
+        if self.already_interpolated:
+            description = QLabel(
+                "Your data has already been interpolated. Running a new interpolation\n"
+                "will replace the current results. Are you sure you want to continue?"
+            )
+            description.setStyleSheet("color: #E03C31;")  # Red color
+        else:
+            description = QLabel(
+                "Select the interpolation method to use for velocity modeling.\n"
+                "Different methods have different characteristics and trade-offs."
+            )
+        
+        description.setAlignment(Qt.AlignCenter)
+        layout.addWidget(description)
+        layout.addSpacing(10)
+        
+        # Create radio button group for all methods
+        self.method_btn_group = QButtonGroup(self)
+        
+        # FIRST CATEGORY: Interpolation Methods group
+        interp_group = QGroupBox("Interpolation Methods")
+        interp_layout = QVBoxLayout()
+        
+        # RBF interpolation option (default)
+        self.rbf_radio = QRadioButton("Radial Basis Function (RBF)", self)
+        self.rbf_radio.setToolTip("Smooth interpolation that passes through all data points")
+        self.method_btn_group.addButton(self.rbf_radio, 1)
+        interp_layout.addWidget(self.rbf_radio)
+        
+        # Two-step interpolation option
+        self.two_step_radio = QRadioButton("Two-Step Interpolation", self)
+        self.two_step_radio.setToolTip("First extrapolate each CDP using RBF, then interpolate between CDPs")
+        self.method_btn_group.addButton(self.two_step_radio, 6)
+        interp_layout.addWidget(self.two_step_radio)
+        
+        interp_group.setLayout(interp_layout)
+        layout.addWidget(interp_group)
+        
+        # SECOND CATEGORY: Build New Model group
+        model_group = QGroupBox("Build New Model")
+        model_layout = QVBoxLayout()
+        
+        # Custom linear model option
+        self.custom_linear_radio = QRadioButton("Custom Linear Model (V = V₀ + k·TWT)", self)
+        self.custom_linear_radio.setToolTip("Apply a linear velocity model with custom parameters")
+        self.method_btn_group.addButton(self.custom_linear_radio, 2)
+        model_layout.addWidget(self.custom_linear_radio)
+        
+        # Best fit linear model option
+        self.best_linear_radio = QRadioButton("Best Fit Linear Model (V = V₀ + k·TWT)", self)
+        self.best_linear_radio.setToolTip("Find the best linear model that fits all data points")
+        self.method_btn_group.addButton(self.best_linear_radio, 3)
+        model_layout.addWidget(self.best_linear_radio)
+        
+        # Custom logarithmic model option
+        self.custom_log_radio = QRadioButton("Custom Logarithmic Model (V = V₀ + k·ln(TWT))", self)
+        self.custom_log_radio.setToolTip("Apply a logarithmic velocity model with custom parameters")
+        self.method_btn_group.addButton(self.custom_log_radio, 4)
+        model_layout.addWidget(self.custom_log_radio)
+        
+        # Best fit logarithmic model option
+        self.best_log_radio = QRadioButton("Best Fit Logarithmic Model (V = V₀ + k·ln(TWT))", self)
+        self.best_log_radio.setToolTip("Find the best logarithmic model that fits all data points")
+        self.method_btn_group.addButton(self.best_log_radio, 5)
+        model_layout.addWidget(self.best_log_radio)
+        
+        model_group.setLayout(model_layout)
+        layout.addWidget(model_group)
+        
+        # Add explanation
+        explanation = QLabel(
+            "Method characteristics:\n"
+            "• Interpolation Methods: Generate a model that preserves velocity pick values\n"
+            "  - RBF: Classic smooth interpolation preserving all data points\n"
+            "  - Two-Step: Extrapolate per CDP then interpolate between CDPs\n\n"
+            "• Build New Model: Create a new velocity trend based on mathematical functions\n"
+            "  - Custom Linear: Manually specify V₀ and k parameters\n"
+            "  - Best Fit Linear: Find optimal V₀ and k parameters with best R² fit\n"
+            "  - Custom Logarithmic: Manually specify V₀ and k parameters for logarithmic model\n"
+            "  - Best Fit Logarithmic: Find optimal logarithmic curve with best R² fit"
+        )
+        explanation.setStyleSheet("font-size: 10px; color: #555;")
+        layout.addWidget(explanation)
+        
+        layout.addSpacing(10)
+        
+        # Add buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+        
+        # Set default selection
+        self.rbf_radio.setChecked(True)
+    
+    def get_selected_method(self):
+        """Return the selected interpolation method."""
+        if self.rbf_radio.isChecked():
+            return "rbf"
+        elif self.custom_linear_radio.isChecked():
+            return "custom_linear"
+        elif self.best_linear_radio.isChecked():
+            return "best_linear"
+        elif self.custom_log_radio.isChecked():
+            return "custom_log"
+        elif self.best_log_radio.isChecked():
+            return "best_log"
+        elif self.two_step_radio.isChecked():
+            return "two_step"
+        else:
+            return "rbf"  # Default
+

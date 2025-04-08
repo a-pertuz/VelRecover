@@ -7,11 +7,15 @@ from PySide6.QtGui import QFont
 from PySide6.QtCore import QFile, QTextStream
 
 from .ui.main_window import VelRecover2D
+from .config.app_config import AppConfig
 
 def main():
     """Run the VelRecover application."""
+    # Initialize configuration
+    config = AppConfig()
+    
+    # Initialize application
     app = QApplication(sys.argv)
-
     
     # Load and apply stylesheet
     style_file = QFile(os.path.join(os.path.dirname(__file__), "ui", "theme.qss"))
@@ -24,21 +28,25 @@ def main():
         app.setStyle("windowsvista")
         app.setFont(QFont("Segoe UI", 10))
 
-    window = VelRecover2D()
+    # Create main window with configuration
+    window = VelRecover2D(config)
     window.setWindowTitle('VelRecover')
+    
+    # Set window position and size
     screen = QApplication.primaryScreen().geometry()
     screen_width = min(screen.width(), 1920)
     screen_height = min(screen.height(), 1080)
     pos_x = int(screen_width * 0.05)
     pos_y = int(screen_height * 0.05)
-    window_width= int(screen_width * 0.25)
+    window_width = int(screen_width * 0.25)
     window_height = int(screen_height * 0.85)
     window.setGeometry(pos_x, pos_y, window_width, window_height)
     
+    # Show window
     window.show()
     
+    # Run application
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()
