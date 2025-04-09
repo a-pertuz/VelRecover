@@ -14,6 +14,8 @@ from .dialogs import FirstRunDialog, AboutDialog, HelpDialog, ModelSelectionDial
 from .distribution_display import VelocityDistributionWindow, plot_velocity_distribution
 from .segy_display import SegyDisplayWindow
 
+from ..utils.interpolation_utils import calculate_regression_params
+
 from ..utils import (
     initialize_log_file, close_log_file, section_header, 
     success_message, error_message, info_message, 
@@ -230,12 +232,22 @@ class VelRecover2D(QMainWindow):
         # Load text file button
         load_text_file_button = QPushButton("Load Text File", self)
         load_text_file_button.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        load_text_file_button.setToolTip(
+            "Load velocity data from a text file.\n"
+            "Expected format: CDP TWT(ms) Velocity(m/s)\n"
+            "Supported file types: .dat, .txt, .tsv, .csv"
+        )
         load_text_file_button.clicked.connect(self.load_text_file)
         files_layout.addWidget(load_text_file_button)
         
         # Load SEGY file button
         self.load_segy_file_button = QPushButton("Load SEGY File", self)
         self.load_segy_file_button.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.load_segy_file_button.setToolTip(
+            "Load SEGY seismic data file.\n"
+            "This provides spatial context for your velocity data.\n"
+            "Supported file types: .sgy, .segy"
+        )
         self.load_segy_file_button.clicked.connect(self.load_segy_file)
         self.load_segy_file_button.setEnabled(False)
         files_layout.addWidget(self.load_segy_file_button)
@@ -250,13 +262,32 @@ class VelRecover2D(QMainWindow):
         # Time shift button
         self.timeshift_button = QPushButton("Apply Time Shift", self)
         self.timeshift_button.setIcon(self.style().standardIcon(QStyle.SP_ArrowUp))
+        self.timeshift_button.setToolTip(
+            "Add or subtract a constant time value to all TWT values.\n"
+            "Useful for aligning velocity data with SEGY when there's a time offset."
+        )
         self.timeshift_button.clicked.connect(self.apply_timeshift)
         self.timeshift_button.setEnabled(False)
         processing_layout.addWidget(self.timeshift_button)
         
+        # Add custom picks button
+        self.add_custom_picks_button = QPushButton("Add Custom Picks", self)
+        self.add_custom_picks_button.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        self.add_custom_picks_button.setToolTip(
+            "Enter custom pick mode to add, edit, or delete velocity picks directly on the SEGY display.\n"
+            "Custom picks can be saved as a new velocity file."
+        )
+        self.add_custom_picks_button.clicked.connect(self.enable_custom_picks)
+        self.add_custom_picks_button.setEnabled(False)
+        processing_layout.addWidget(self.add_custom_picks_button)
+        
         # Interpolate button
         self.interpolate2D_button = QPushButton("Interpolate", self)
         self.interpolate2D_button.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        self.interpolate2D_button.setToolTip(
+            "Run velocity interpolation to create a continuous velocity model from discrete picks.\n"
+            "Multiple interpolation methods are available for different geological scenarios."
+        )
         self.interpolate2D_button.clicked.connect(self.interpolation_2d)
         self.interpolate2D_button.setEnabled(False)
         processing_layout.addWidget(self.interpolate2D_button)
@@ -271,12 +302,22 @@ class VelRecover2D(QMainWindow):
         # Save data buttons
         self.save_data_button = QPushButton("Save Data as TXT", self)
         self.save_data_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.save_data_button.setToolTip(
+            "Save interpolated velocity data as a text file.\n"
+            "Format: CDP TWT(ms) Velocity(m/s)\n"
+            "This format is human-readable and can be imported into other software."
+        )
         self.save_data_button.clicked.connect(self.save_vel2D_data_txt)
         self.save_data_button.setEnabled(False)
         save_layout.addWidget(self.save_data_button)
         
         self.save_data_bin_button = QPushButton("Save Data as BIN", self)
         self.save_data_bin_button.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.save_data_bin_button.setToolTip(
+            "Save interpolated velocity data as a binary file.\n"
+            "Format: 32-bit floating-point binary grid data\n"
+            "This format is compatible with Seismic Unix and other processing software."
+        )
         self.save_data_bin_button.clicked.connect(self.save_vel2D_data_bin)
         self.save_data_bin_button.setEnabled(False)
         save_layout.addWidget(self.save_data_bin_button)
@@ -294,12 +335,22 @@ class VelRecover2D(QMainWindow):
         self.blur_value_input = QLineEdit(self)
         self.blur_value_input.setValidator(QIntValidator())
         self.blur_value_input.setText("1")
+        self.blur_value_input.setToolTip(
+            "Set the Gaussian blur kernel size.\n"
+            "Higher values create smoother velocity models.\n"
+            "Recommended range: 1-20 for typical data."
+        )
         blur_value_layout.addWidget(blur_value_label)
         blur_value_layout.addWidget(self.blur_value_input)
         blur_layout.addLayout(blur_value_layout)
         
         # Apply button
         self.apply_blur_button = QPushButton("Apply Gaussian Blur", self)
+        self.apply_blur_button.setToolTip(
+            "Apply Gaussian blur smoothing to the velocity model.\n"
+            "This reduces noise and creates a more geologically realistic model.\n"
+            "You can apply multiple passes with different values."
+        )
         self.apply_blur_button.clicked.connect(self.apply_gaussian_blur)
         self.apply_blur_button.setEnabled(False)
         blur_layout.addWidget(self.apply_blur_button)
@@ -321,6 +372,10 @@ class VelRecover2D(QMainWindow):
         # Reset button below console
         reset_button = QPushButton("Restart Process", self)
         reset_button.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
+        reset_button.setToolTip(
+            "Clear all loaded data and reset the application to its initial state.\n"
+            "Warning: All unsaved data will be lost!"
+        )
         reset_button.clicked.connect(self.restart_process)
         self.main_layout.addWidget(reset_button)
         
@@ -351,11 +406,15 @@ class VelRecover2D(QMainWindow):
         info_message(self.console, f"Applying {time_shift} ms time shift to velocity data...")
         
         try:
-            # Make a copy of the original data
             original_twt = self.velocity_data.twt.copy()
             
             # Apply the shift
             self.velocity_data.twt = self.velocity_data.twt + time_shift
+            
+            # Recalculate regression parameters after time shift
+            self.velocity_data.regression_params = calculate_regression_params(
+                self.velocity_data.twt, self.velocity_data.vel
+            )
             
             # Update visualization
             self.show_velocity_distribution()
@@ -363,10 +422,17 @@ class VelRecover2D(QMainWindow):
             # If SEGY viewer is open, update it too
             if hasattr(self, 'segy_viewer') and self.segy_viewer is not None:
                 try:
-                    self.segy_viewer.velocity_twt = self.velocity_data.twt
+                    # Update both the underlying data and the custom picks manager's data
+                    self.segy_viewer.velocity_twt = self.velocity_data.twt.copy()
+                    self.segy_viewer.custom_picks_manager.initialize_from_existing(
+                        self.velocity_data.cdp, 
+                        self.velocity_data.twt, 
+                        self.velocity_data.vel, 
+                        self.velocity_data.text_file_path
+                    )
                     self.segy_viewer.update_display()
-                except:
-                    pass
+                except Exception as e:
+                    warning_message(self.console, f"Error updating SEGY display after time shift: {str(e)}")
             
             success_message(self.console, f"Successfully applied {time_shift} ms time shift")
         except Exception as e:
@@ -425,6 +491,7 @@ class VelRecover2D(QMainWindow):
                 info_message(self.console, f"SEGY file loaded: {file_path}")
                 self.interpolate2D_button.setEnabled(True)
                 self.timeshift_button.setEnabled(True)  # Enable timeshift button
+                self.add_custom_picks_button.setEnabled(True)  # Enable custom picks button
                 
                 # Automatically display the SEGY file
                 self.show_segy_viewer()
@@ -482,6 +549,8 @@ class VelRecover2D(QMainWindow):
     
     def interpolation_2d(self):
         """Perform 2D interpolation of velocity data and show the results automatically."""
+        import time
+        from datetime import timedelta
                    
         # Check if we're already interpolated and provide warning if needed
         already_interpolated = self.velocity_data.has_interpolation()
@@ -528,57 +597,118 @@ class VelRecover2D(QMainWindow):
             params = {'v0': float(v0), 'k': float(k)}
             info_message(self.console, f"Custom logarithmic model parameters: V₀={v0:.1f}, k={k:.1f}")
         
+        # Start progress and tracking time
         self.status_bar.start("Starting interpolation process...", 100)
         section_header(self.console, "Interpolation")
         info_message(self.console, f"Starting interpolation with {method_type} method...")
         
-        result = interpolate(
-            self.velocity_data,
-            method_type,
-            console=self.console,
-            status_callback=self.status_bar.update,
-            cancel_check=self.status_bar.wasCanceled,
-            **params,
-        )
+        start_time = time.time()
+        last_update_time = start_time
+        update_interval = 0.5  # seconds between progress updates
         
-        if result.get('cancelled'):
-            warning_message(self.console, "Interpolation cancelled by user")
-            self.status_bar.finish()
-            return
-        
-        if not result['success']:
-            error_message(self.console, f"Error during interpolation: {result.get('error', 'Unknown error')}")
-            self.status_bar.finish()
-            return
+        # Create a progress callback that includes time estimation
+        def progress_callback(percent, message=""):
+            nonlocal last_update_time
+            current_time = time.time()
+            
+            # Only update status bar at reasonable intervals to avoid UI slowdown
+            if current_time - last_update_time >= update_interval or percent >= 100:
+                elapsed_time = current_time - start_time
                 
-        self.status_bar.update(100, "Interpolation completed successfully")
-        success_message(self.console, f"Interpolation completed successfully using {self.velocity_data.model_type} method")
+                # Only show time estimate if we're at least 5% through the process
+                estimated_message = ""
+                if percent > 5 and percent < 100:
+                    # Estimate total time based on progress so far
+                    estimated_total = elapsed_time * 100 / percent
+                    estimated_remaining = estimated_total - elapsed_time
+                    
+                    # Format as MM:SS
+                    time_remaining = str(timedelta(seconds=int(estimated_remaining))).split('.')[0]
+                    estimated_message = f" (Est. remaining: {time_remaining})"
+                
+                update_message = f"{message}{estimated_message}" if message else f"Interpolating...{estimated_message}"
+                self.status_bar.update(percent, update_message)
+                last_update_time = current_time
         
-        # Show additional statistics
-        summary_statistics(self.console, result['stats'])
-        
-        # Enable buttons for further processing
-        self.save_data_button.setEnabled(True)
-        self.save_data_bin_button.setEnabled(True)
-        self.apply_blur_button.setEnabled(True)
-        
-        # Update SEGY display if open or create new one
-        if hasattr(self, 'segy_viewer') and self.segy_viewer is not None:
-            try:
-                self.segy_viewer.update_velocity_model(
-                    self.velocity_data.cdp_grid,
-                    self.velocity_data.twt_grid,
-                    self.velocity_data.output_vel_grid,
-                    self.velocity_data.model_type
-                )
-            except:
-                # If fails, create a new viewer
+        try:
+            result = interpolate(
+                self.velocity_data,
+                method_type,
+                console=self.console,
+                status_callback=progress_callback,
+                cancel_check=self.status_bar.wasCanceled,
+                **params,
+            )
+            
+            if result.get('cancelled'):
+                warning_message(self.console, "Interpolation cancelled by user")
+                self.status_bar.finish()
+                return
+            
+            if not result['success']:
+                error_message(self.console, f"Error during interpolation: {result.get('error', 'Unknown error')}")
+                
+                # Enhanced error handling with specific advice based on error type
+                error_msg = result.get('error', '').lower()
+                if 'memory' in error_msg:
+                    QMessageBox.critical(self, "Memory Error", 
+                                        "The system ran out of memory during interpolation. Try:\n"
+                                        "1. Close other applications to free memory\n"
+                                        "2. Use a smaller dataset or lower resolution\n"
+                                        "3. Try a different interpolation method")
+                elif 'singular matrix' in error_msg or 'linalg' in error_msg:
+                    QMessageBox.critical(self, "Numerical Error", 
+                                        "A numerical error occurred during interpolation. Try:\n"
+                                        "1. Check your velocity data for anomalous values\n"
+                                        "2. Try a different interpolation method\n"
+                                        "3. Ensure your data points aren't too closely spaced")
+                else:
+                    QMessageBox.critical(self, "Interpolation Error", 
+                                        f"Error during interpolation: {result.get('error', 'Unknown error')}\n\n"
+                                        "Try using a different interpolation method or check your data.")
+                
+                self.status_bar.finish()
+                return
+                
+            # Calculate and display elapsed time
+            elapsed_time = time.time() - start_time
+            time_str = str(timedelta(seconds=int(elapsed_time))).split('.')[0]
+                
+            self.status_bar.update(100, f"Interpolation completed successfully in {time_str}")
+            success_message(self.console, f"Interpolation completed successfully in {time_str} using {self.velocity_data.model_type} method")
+            
+            # Show additional statistics
+            summary_statistics(self.console, result['stats'])
+            
+            # Enable buttons for further processing
+            self.save_data_button.setEnabled(True)
+            self.save_data_bin_button.setEnabled(True)
+            self.apply_blur_button.setEnabled(True)
+            
+            # Update SEGY display if open or create new one
+            if hasattr(self, 'segy_viewer') and self.segy_viewer is not None:
+                try:
+                    self.segy_viewer.update_velocity_model(
+                        self.velocity_data.cdp_grid,
+                        self.velocity_data.twt_grid,
+                        self.velocity_data.output_vel_grid,
+                        self.velocity_data.model_type
+                    )
+                except Exception as e:
+                    warning_message(self.console, f"Error updating SEGY viewer: {str(e)}")
+                    # If fails, create a new viewer
+                    self.show_segy_viewer()
+            else:
+                # Show SEGY viewer with interpolated data
                 self.show_segy_viewer()
-        else:
-            # Show SEGY viewer with interpolated data
-            self.show_segy_viewer()
         
-        self.status_bar.finish()
+        except Exception as e:
+            error_message(self.console, f"Unexpected error during interpolation: {str(e)}")
+            QMessageBox.critical(self, "Unexpected Error", 
+                               f"An unexpected error occurred:\n{str(e)}\n\n"
+                               "This has been logged and the application will continue running.")
+        finally:
+            self.status_bar.finish()
     
     def apply_gaussian_blur(self):
         """Apply Gaussian blur to the interpolated velocity data."""
@@ -724,3 +854,120 @@ class VelRecover2D(QMainWindow):
             # Clear status bar
             self.status_bar.showMessage("")
             self.status_bar.finish()
+    
+    def enable_custom_picks(self):
+        """Enable custom picks mode in the SEGY viewer."""
+        if not self.velocity_data.has_segy():
+            QMessageBox.warning(self, "Warning", "No SEGY file loaded. Please load a SEGY file first.")
+            return
+            
+        if not hasattr(self, 'segy_viewer') or self.segy_viewer is None:
+            # Create the SEGY viewer if it doesn't exist
+            self.show_segy_viewer()
+            
+        # Enable custom picks mode in the SEGY viewer
+        self.segy_viewer.enable_custom_picks_mode(True)
+        
+        # Show instructions
+        QMessageBox.information(
+            self,
+            "Custom Picks Mode",
+            "Custom picks mode is now enabled.\n\n"
+            "Click on the SEGY display to add new velocity picks.\n"
+            "Click on an existing pick to modify its velocity value.\n"
+            "When finished, click 'Save Custom Picks' to save your changes."
+        )
+        
+        # Ensure the SEGY viewer is visible and in front
+        self.segy_viewer.show()
+        self.segy_viewer.raise_()
+        self.segy_viewer.activateWindow()
+    
+    def load_text_file_path(self, file_path):
+        """Load a text file from a specific path."""
+        info_message(self.console, f"Loading text file: {file_path}")
+        
+        # Store the current SEGY file path before loading new data
+        current_segy_file_path = None
+        if hasattr(self.velocity_data, 'segy_file_path'):
+            current_segy_file_path = self.velocity_data.segy_file_path
+        
+        # Use the interpolation utilities to load the data
+        result = load_text_data(file_path)
+        if result['success']:
+            self.velocity_data = result['data']
+            
+            # Explicitly ensure the text_file_path is set
+            self.velocity_data.text_file_path = file_path
+            
+            # Restore the SEGY file path if it was previously set
+            if current_segy_file_path:
+                self.velocity_data.segy_file_path = current_segy_file_path
+                
+                # If SEGY file was previously loaded, reload its dimensions
+                try:
+                    import seisio
+                    sio = seisio.input(current_segy_file_path)
+                    self.velocity_data.set_segy_dimensions(
+                        nsamples=sio.nsamples,
+                        ntraces=sio.ntraces,
+                        dt_ms=sio.vsi / 1000.0,
+                        delay=sio.delay
+                    )
+                except Exception as e:
+                    warning_message(self.console, f"Could not reload SEGY dimensions: {str(e)}")
+            
+            self.load_segy_file_button.setEnabled(True)
+            
+            # Update the distribution window
+            self.show_velocity_distribution()
+            
+            # Log statistics about the loaded data
+            summary_statistics(self.console, result['stats'])
+            success_message(self.console, f"Successfully loaded {result['stats']['points']} velocity picks")
+            
+            # If SEGY viewer is open, update it with the new picks
+            if hasattr(self, 'segy_viewer') and self.segy_viewer is not None:
+                try:
+                    self.segy_viewer.velocity_cdp = self.velocity_data.cdp
+                    self.segy_viewer.velocity_twt = self.velocity_data.twt
+                    self.segy_viewer.velocity_vel = self.velocity_data.vel
+                    self.segy_viewer.has_velocity_picks = True
+                    self.segy_viewer.text_file_path = file_path  # Also update in the viewer
+                    self.segy_viewer.update_display()
+                except Exception as e:
+                    warning_message(self.console, f"Error updating SEGY display: {str(e)}")
+            
+            # Enable the appropriate buttons
+            self.add_custom_picks_button.setEnabled(True)
+            # If we had a SEGY file loaded before, enable all SEGY-dependent buttons
+            if current_segy_file_path:
+                self.interpolate2D_button.setEnabled(True)
+                self.timeshift_button.setEnabled(True)
+        else:
+            error_message(self.console, f"Error loading text file: {result.get('error', 'Unknown error')}")
+            QMessageBox.critical(self, "Error", f"Failed to load text file: {result.get('error', 'Unknown error')}")
+
+    def load_segy_file_path(self, file_path):
+        """Load a SEGY file from a specific path."""
+        if not file_path or not os.path.exists(file_path):
+            error_message(self.console, f"SEGY file not found: {file_path}")
+            return
+            
+        info_message(self.console, f"Loading SEGY file: {file_path}")
+        
+        result = load_segy_file(self.velocity_data, file_path)
+        
+        if result['success']:
+            info_message(self.console, f"SEGY file loaded: {file_path}")
+            self.interpolate2D_button.setEnabled(True)
+            self.timeshift_button.setEnabled(True)
+            self.add_custom_picks_button.setEnabled(True)
+            
+            # Refresh the SEGY viewer if open, or create a new one
+            if hasattr(self, 'segy_viewer') and self.segy_viewer is not None:
+                self.show_segy_viewer()
+            else:
+                self.show_segy_viewer()
+        else:
+            error_message(self.console, f"Error loading SEGY file: {result.get('error', 'Unknown error')}")

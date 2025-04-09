@@ -599,14 +599,13 @@ QSlider::handle:horizontal:disabled {
 /* Message Box - Improved visibility */
 QMessageBox {
     background-color: #ffffff;
-}
-
-QMessageBox QLabel {
-    min-width: 240px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px;
 }
 
 QMessageBox QPushButton {
-    min-width: 80px;
+    min-width: 40px;
 }
 
 /* List Views */

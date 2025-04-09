@@ -17,16 +17,22 @@ from .VelocityData import VelocityData
 from ..utils.console_utils import info_message
 
 
-def load_text_data(file_path, delimiter=None, skiprows=1):
+def load_text_data(file_path, delimiter=None):
     """
-    Load velocity data from text file.
+    Load velocity data from a text file.
     
+    Args:
+        file_path: Path to the text file
+        
     Returns:
-        dict: Result with success/error information and velocity data object
+        dict: Result with success/error information and loaded data
     """
-    velocity_data = VelocityData()
-    
     try:
+        # Create velocity data object
+        vel_data = VelocityData()
+        
+
+
         # Auto-detect delimiter if not specified
         if delimiter is None:
             with open(file_path, 'r') as f:
@@ -35,37 +41,37 @@ def load_text_data(file_path, delimiter=None, skiprows=1):
             delimiter = '\t' if has_tabs else None
         
         # Load data
-        data = np.loadtxt(file_path, delimiter=delimiter, skiprows=skiprows)
+        data = np.loadtxt(file_path, delimiter=delimiter, skiprows=1, comments='#')
         
-        # Ensure at least 3 columns
+        # Check data dimensions
         if data.shape[1] < 3:
             return {
                 'success': False,
-                'error': f"Expected at least 3 columns (CDP, TWT, VEL), but found {data.shape[1]}"
+                'error': 'Invalid data format. Expected at least 3 columns: CDP TWT VEL'
             }
         
-        # Store data
-        velocity_data.cdp = data[:, 0]
-        velocity_data.twt = data[:, 1]
-        velocity_data.vel = data[:, 2]
-        velocity_data.text_file_path = file_path
+        # Store data in velocity data object
+        vel_data.cdp = data[:, 0]
+        vel_data.twt = data[:, 1]
+        vel_data.vel = data[:, 2]
+        
+        # Store text file path for reference
+        vel_data.text_file_path = file_path
         
         # Calculate regression parameters
-        velocity_data.regression_params = calculate_regression_params(
-            velocity_data.twt, velocity_data.vel
-        )
+        vel_data.regression_params = calculate_regression_params(vel_data.twt, vel_data.vel)
         
+        # Return success with data
         return {
             'success': True,
-            'data': velocity_data,
+            'data': vel_data,
             'stats': {
-                'points': len(velocity_data.cdp),
-                'cdp_range': (min(velocity_data.cdp), max(velocity_data.cdp)),
-                'twt_range': (min(velocity_data.twt), max(velocity_data.twt)),
-                'vel_range': (min(velocity_data.vel), max(velocity_data.vel))
+                'points': len(vel_data.cdp),
+                'CDP range': f"{min(vel_data.cdp):.0f} to {max(vel_data.cdp):.0f}",
+                'TWT range': f"{min(vel_data.twt):.1f} to {max(vel_data.twt):.1f} ms",
+                'velocity range': f"{min(vel_data.vel):.0f} to {max(vel_data.vel):.0f} m/s",
             }
         }
-        
     except Exception as e:
         return {
             'success': False,
@@ -117,36 +123,42 @@ def calculate_regression_params(twt, vel):
     return result
 
 def load_segy_file(velocity_data, file_path):
-    """Store SEGY file path in velocity data object and load SEGY dimensions."""
-    if not file_path:
-        return {
-            'success': False,
-            'error': "No file path provided"
-        }
+    """
+    Load SEGY file and associate with velocity data.
     
+    Args:
+        velocity_data: VelocityData object to update
+        file_path: Path to the SEGY file
+        
+    Returns:
+        dict: Result with success/error information
+    """
     try:
-        # Set the SEGY file path
-        velocity_data.segy_file_path = file_path
+        import seisio
         
-        # Load SEGY dimensions
-        segy_data = load_segy_data(file_path)
+        # Load SEGY file header to get dimensions
+        sio = seisio.input(file_path)
         
-        # Store dimensions in the velocity data object
+        # Set SEGY dimensions in velocity data
         velocity_data.set_segy_dimensions(
-            nsamples=segy_data['nsamples'],
-            ntraces=segy_data['ntraces'],
-            dt_ms=segy_data['dt_ms'],
-            delay=segy_data['delay']
+            nsamples=sio.nsamples,
+            ntraces=sio.ntraces,
+            dt_ms=sio.vsi / 1000.0,
+            delay=sio.delay
         )
         
-        return {
-            'success': True,
-            'dimensions': f"{segy_data['nsamples']}×{segy_data['ntraces']}"
-        }
+        # Update SEGY file path
+        velocity_data.segy_file_path = file_path
+        
+        # If interpolation exists, align to SEGY dimensions
+        if velocity_data.has_interpolation():
+            velocity_data.align_to_segy_dimensions()
+        
+        return {'success': True}
     except Exception as e:
         return {
             'success': False,
-            'error': f"Error loading SEGY file: {str(e)}"
+            'error': str(e)
         }
 
 def interpolate(velocity_data, method, console=None, status_callback=None, cancel_check=None, **kwargs):

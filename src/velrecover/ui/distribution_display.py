@@ -31,7 +31,7 @@ class VelocityDistributionWindow(QDialog):
         screen_height = min(screen.height(), 1080)
         pos_x = int(screen_width * 0.35 + 10)
         pos_y = int(screen_height * 0.1)
-        window_width= int(screen_width * 0.4)
+        window_width= int(screen_width * 0.35)
         window_height = int(screen_height * 0.6)
         self.setGeometry(pos_x, pos_y, window_width, window_height)
     
@@ -58,46 +58,38 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=
     canvas.figure.clear()
     canvas.ax = canvas.figure.add_subplot(111)
 
-    # Check if the data is not empty
-    if len(vel) == 0 or len(twt) == 0:
-        if console:
-            warning_message(console, "No velocity data to display")
-        return
-
-    # Get unique CDP values and assign colors
+    # Get unique CDP values and assign random colors
     unique_cdps = np.unique(cdp)
-    colors = plt.cm.jet(np.linspace(0, 1, len(unique_cdps)))
-    
+    np.random.seed(42) 
+    colors = np.random.random((len(unique_cdps), 3))  
+
+    hsv_colors = plt.matplotlib.colors.rgb_to_hsv(colors)
+    hsv_colors[:, 1] = 0.7 + 0.3 * np.random.random(len(unique_cdps))  # Saturation 0.7-1.0
+    hsv_colors[:, 2] = 0.7 + 0.3 * np.random.random(len(unique_cdps))  # Value 0.7-1.0
+    colors = plt.matplotlib.colors.hsv_to_rgb(hsv_colors)
+
+    colors = np.hstack((colors, np.ones((len(unique_cdps), 1))))  
+
     # Plot scatter for each CDP
     for cdp_val, color in zip(unique_cdps, colors):
         mask = cdp == cdp_val
         velocities = vel[mask]
         twts = twt[mask]
         
-        # Plot the scatter points
-        canvas.ax.scatter(
+        # Plot the scatter points with connected lines
+        canvas.ax.plot(
             velocities, 
             twts, 
             color=color, 
             label=f'{int(cdp_val)}',
-            s=50,  # Larger marker size
-            edgecolor='black',
-            linewidth=0.8,
+            marker='.',  
+            markersize=8,
+            linestyle='-',  
+            linewidth=0.2,  
             alpha=0.5,
             zorder=10
         )
 
-        # Plot dashed line connecting the points
-        sorted_indices = np.argsort(twts)  # Sort by TWT for better connection
-        canvas.ax.plot(
-            velocities[sorted_indices],
-            twts[sorted_indices],
-            color=color,
-            linestyle='--',
-            linewidth=1.5,
-            alpha=0.5,
-            zorder=5
-        )
 
     # Add regression lines if parameters are provided
     if regression_params:
@@ -117,18 +109,29 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=
             # Calculate TWT values for each velocity point using the inverse of the linear model
             twt_linear = [(v - v0) / k if k != 0 else 0 for v in vel_points]
             
-            # Only plot within reasonable TWT range
             valid_mask = np.logical_and(np.array(twt_linear) >= 0, np.array(twt_linear) <= max(twt) * 1.1)
             if np.any(valid_mask):
+
                 canvas.ax.plot(
                     np.array(vel_points)[valid_mask], 
                     np.array(twt_linear)[valid_mask], 
                     'r-', 
-                    linewidth=2, 
-                    label=f'Linear: V = {v0:.1f} + {k:.3f}·TWT \n (R²: {r2:.3f})',
+                    linewidth=2.5, 
+                    label='Linear',  
                     zorder=15
                 )
-        
+                
+                # Add formula as text annotation
+                formula_text = f'Linear: V = {v0:.1f} + {k:.3f}·TWT (R²: {r2:.3f})'
+                canvas.ax.text(
+                    0.02, 0.02,  # Position at bottom left
+                    formula_text,
+                    transform=canvas.ax.transAxes,  # Use axis coordinates
+                    fontsize=9,
+                    color='red',
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=3)
+                )
+
         # Logarithmic regression
         if 'logarithmic' in regression_params:
             log_params = regression_params['logarithmic']
@@ -139,16 +142,26 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=
             # Calculate TWT values for each velocity point using the inverse of the logarithmic model
             twt_log = [np.exp((v - v0) / k) if k != 0 else 0 for v in vel_points]
             
-            # Only plot within reasonable TWT range
             valid_mask = np.logical_and(np.array(twt_log) >= 0, np.array(twt_log) <= max(twt) * 1.1)
             if np.any(valid_mask):
+
                 canvas.ax.plot(
                     np.array(vel_points)[valid_mask], 
                     np.array(twt_log)[valid_mask], 
                     'g-', 
                     linewidth=2, 
-                    label=f'Log: V = {v0:.1f} + {k:.1f}·ln(TWT) \n (R²: {r2:.3f})',
+                    label='Logarithmic', 
                     zorder=15
+                )
+                
+                formula_text = f'Log: V = {v0:.1f} + {k:.1f}·ln(TWT) (R²: {r2:.3f})'
+                canvas.ax.text(
+                    0.02, 0.08,  
+                    formula_text,
+                    transform=canvas.ax.transAxes,  
+                    fontsize=9,
+                    color='green',
+                    bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=3)
                 )
 
     # Add moving average trend line 
@@ -178,35 +191,34 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=
             ma_vel, 
             ma_twt, 
             'k--',  
-            linewidth=2,
-            label=f'Moving Average)',
+            linewidth=1.5,
+            label=f'Moving Average',
             zorder=20
         )
 
-    # Set labels and title
     canvas.ax.set_xlabel('Velocity (m/s)', fontsize=10, fontweight='bold')
     canvas.ax.set_ylabel('TWT (ms)', fontsize=10, fontweight='bold')
     canvas.ax.set_title('Velocity Distribution by CDP', fontsize=12, fontweight='bold')
 
-    # Set axis limits with better padding
     vel_range = max(vel) - min(vel)
     twt_range = max(twt) - min(twt)
     
     canvas.ax.set_xlim(min(vel) - vel_range*0.05, max(vel) + vel_range*0.05)
-    canvas.ax.set_ylim(0, max(twt) * 1.05)  # Start from 0 with a little padding at the top
-    canvas.ax.invert_yaxis()  # Invert Y axis for consistency with velocity analysis
+    canvas.ax.set_ylim(0, max(twt) * 1.05)
+    canvas.ax.invert_yaxis()  
 
-    # Always include all CDPs in the legend, no sampling
-    canvas.ax.legend(
-        title='CDP', 
-        loc='upper left', 
-        bbox_to_anchor=(1.05, 1),
-        borderaxespad=0.,
-        frameon=True,
-        fancybox=True,
-        shadow=True,
-        fontsize=9
-    )
+    handles, labels = [], []
+    for handle, label in zip(*canvas.ax.get_legend_handles_labels()):
+        if label not in ['Linear', 'Logarithmic', 'Moving Average']:
+            continue
+        handles.append(handle)
+        labels.append(label)
+    
+    if handles:  # Only create legend if we have items
+        canvas.ax.legend(handles, labels, loc='upper left', 
+                        bbox_to_anchor=(0.01, 0.3),
+                        frameon=True, fancybox=True, fontsize=9)
+    
     
     # Add grid for better readability
     canvas.ax.grid(True, linestyle='--', alpha=0.3)

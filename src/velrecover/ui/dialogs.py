@@ -6,7 +6,7 @@ import os
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QGroupBox, QRadioButton, QButtonGroup,
-    QFileDialog, QScrollArea, QWidget, QDialogButtonBox, QLineEdit
+    QFileDialog, QScrollArea, QWidget, QDialogButtonBox, QLineEdit, QSpinBox
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QDoubleValidator
@@ -640,4 +640,48 @@ class ModelSelectionDialog(QDialog):
             return "two_step"
         else:
             return "rbf"  # Default
+
+class VelocityEntryDialog(QDialog):
+    """Dialog for entering velocity value for custom pick."""
+    
+    def __init__(self, parent=None, min_vel=1000, max_vel=6000, default_vel=None):
+        """Initialize the velocity entry dialog with min/max ranges."""
+        super().__init__(parent)
+        self.setWindowTitle("Enter Velocity")
+        
+        # Store velocity bounds
+        self.min_vel = min_vel
+        self.max_vel = max_vel
+        
+        # Create layout
+        layout = QVBoxLayout(self)
+        
+        # Add information label
+        info_label = QLabel("Enter velocity value (m/s):")
+        layout.addWidget(info_label)
+        
+        # Create velocity input with validator
+        self.velocity_input = QSpinBox()
+        self.velocity_input.setRange(min_vel, max_vel)
+        self.velocity_input.setSpecialValueText("Enter velocity...")
+        self.velocity_input.setSingleStep(10)
+        layout.addWidget(self.velocity_input)
+        
+        # Add position info labels
+        self.position_info = QLabel("")
+        layout.addWidget(self.position_info)
+        
+        # Add buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def set_position_info(self, cdp, twt):
+        """Set the position information for the dialog."""
+        self.position_info.setText(f"Position: CDP {cdp:.0f}, TWT {twt:.1f} ms")
+    
+    def get_velocity(self):
+        """Get the entered velocity value."""
+        return self.velocity_input.value()
 

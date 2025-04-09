@@ -45,6 +45,15 @@ def _write_to_log(message):
         except Exception as e:
             print(f"Error writing to log file: {e}")
 
+def _scroll_to_end(console):
+    """Ensure the console scrolls to show the latest messages."""
+    try:
+        from PySide6.QtGui import QTextCursor
+        console.moveCursor(QTextCursor.End)
+        console.ensureCursorVisible()
+    except Exception:
+        pass
+
 def timestamp():
     """Return current timestamp for console messages."""
     return datetime.datetime.now().strftime("[%H:%M:%S]")
@@ -54,30 +63,35 @@ def section_header(console, title):
     message = f"\n{timestamp()} === {title.upper()} ==="
     console.append(message)
     _write_to_log(message)
+    _scroll_to_end(console)
     
 def success_message(console, message):
     """Print a success message."""
     formatted = f"{timestamp()} ✓ {message}"
     console.append(formatted)
     _write_to_log(formatted)
+    _scroll_to_end(console)
     
 def error_message(console, message):
     """Print an error message."""
     formatted = f"{timestamp()} ❌ ERROR: {message}"
     console.append(formatted)
     _write_to_log(formatted)
+    _scroll_to_end(console)
     
 def warning_message(console, message):
     """Print a warning message."""
     formatted = f"{timestamp()} ⚠️ WARNING: {message}"
     console.append(formatted)
     _write_to_log(formatted)
+    _scroll_to_end(console)
     
 def info_message(console, message):
     """Print an info message."""
     formatted = f"{timestamp()} ℹ️ {message}"
     console.append(formatted)
     _write_to_log(formatted)
+    _scroll_to_end(console)
     
 def progress_message(console, step, total, message):
     """Print a progress message with step count."""
@@ -87,6 +101,7 @@ def progress_message(console, step, total, message):
         formatted = f"{timestamp()} {message}"
     console.append(formatted)
     _write_to_log(formatted)
+    _scroll_to_end(console)
         
 def summary_statistics(console, stats_dict):
     """Print summary statistics."""
@@ -99,5 +114,6 @@ def summary_statistics(console, stats_dict):
         console.append(item)
         _write_to_log(item)
     
-    console.append("")  # Empty line after statistics
+    console.append("")  
     _write_to_log("")
+    _scroll_to_end(console)

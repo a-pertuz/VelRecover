@@ -1,16 +1,21 @@
 """Two-step interpolation model for velocity analysis."""
 
 import numpy as np
+import cv2
 from scipy.interpolate import RBFInterpolator
 
 from ..utils.console_utils import info_message, warning_message, success_message
 
+
 def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, nsamples=None, 
-                          dt_ms=4.0, delay=0.0, console=None):
+                          dt_ms=4.0, delay=0.0, console=None, blur_value=2.5):
     """
     Perform two-step interpolation:
     1. Extrapolate velocities for each CDP to cover the full TWT range using RBF interpolation
-    2. Interpolate missing CDPs using RBF interpolation with linear kernel
+    2. Use nearest neighbor for missing CDPs and then apply Gaussian smoothing
+    
+    Parameters:
+        blur_value: Controls the Gaussian blur kernel size (higher = smoother transitions)
     """
     if console:
         info_message(console, "Starting two-step interpolation...")
@@ -102,34 +107,38 @@ def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, ns
             if console:
                 warning_message(console, f"RBF interpolation failed for CDP {unique_cdp}: {str(e)}")
     
-    # Step 2: Fill missing CDPs using RBF interpolation instead of nearest neighbor
+    # Step 2: Fill missing CDPs using nearest neighbor, then apply Gaussian blur
     if console:
-        info_message(console, "Step 2: Filling missing CDPs using RBF interpolation...")
+        info_message(console, "Step 2: Filling missing CDPs using nearest neighbor + Gaussian smoothing...")
     
-    # Fill remaining NaN values
-    valid_mask = ~np.isnan(vel_grid)
-    if np.any(valid_mask):
-        # Get points where we have velocity data
-        grid_points = np.array([(twt_grid[i, j], cdp_grid[i, j]) 
-                            for i, j in zip(*np.where(valid_mask))])
-        grid_values = vel_grid[valid_mask]
-        
-        # Get points where we need to interpolate
-        nan_points = np.array([(twt_grid[i, j], cdp_grid[i, j]) 
-                            for i, j in zip(*np.where(~valid_mask))])
-        
-        if len(grid_points) > 0 and len(nan_points) > 0:
-            # Use RBF interpolation with linear kernel and smoothing=10
-            rbf_interp = RBFInterpolator(grid_points, grid_values, 
-                                        kernel='linear', 
-                                        smoothing=10)
-            interp_values = rbf_interp(nan_points)
-            
-            # Assign interpolated values to grid
-            for (i, j), value in zip(zip(*np.where(~valid_mask)), interp_values):
-                vel_grid[i, j] = value
+    # Find columns where we have valid data
+    valid_cols = []
+    for j in range(vel_grid.shape[1]):
+        if not np.all(np.isnan(vel_grid[:, j])):
+            valid_cols.append(j)
     
-    if console:
-        success_message(console, f"Interpolation complete: {vel_grid.shape[1]} CDPs × {vel_grid.shape[0]} samples")
+    if len(valid_cols) <= 1:
+        if console:
+            warning_message(console, "Not enough valid CDPs for interpolation")
+        return cdp_grid, twt_grid, vel_grid
+    
+    # First pass: Use nearest neighbor to fill all gaps
+    for j in range(vel_grid.shape[1]):
+        if j in valid_cols:
+            continue  # Skip columns that already have data
+        
+        # Find nearest valid column (minimum distance)
+        distances = np.array([abs(j - vc) for vc in valid_cols])
+        nearest_col = valid_cols[np.argmin(distances)]
+        
+        # Copy data from nearest column
+        vel_grid[:, j] = vel_grid[:, nearest_col]
+    
+    # Second pass: Apply Gaussian blur to smooth transitions
+    info_message(console, "Applying Gaussian smoothing with kernel size 251...")
+    
+    vel_grid = cv2.GaussianBlur(vel_grid.astype(np.float32), (251, 251), 0)
+    
+    success_message(console, f"Interpolation complete: {vel_grid.shape[1]} CDPs × {vel_grid.shape[0]} samples")
     
     return cdp_grid, twt_grid, vel_grid

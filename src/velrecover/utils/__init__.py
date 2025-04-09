@@ -11,6 +11,11 @@ from .io_utils import (
     save_velocity_text_data, save_velocity_binary_data
 )
 
+from .ui_utils import (
+    create_progress_callback, show_error_dialog,
+    track_operation_time, confirm_action
+)
+
 from ..core.gauss_blur import apply_gaussian_blur
 
 # Import VelocityData class
@@ -31,6 +36,10 @@ __all__ = [
     # I/O utilities
     'initialize_directories', 'copy_tutorial_files', 'copy_data_between_directories',
     'save_velocity_text_data', 'save_velocity_binary_data',
+    
+    # UI utilities
+    'create_progress_callback', 'show_error_dialog',
+    'track_operation_time', 'confirm_action',
     
     # General utilities
     'apply_gaussian_blur',
