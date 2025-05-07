@@ -4,10 +4,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QApplication
 from PySide6.QtCore import Qt
+from scipy import stats
+from scipy.optimize import curve_fit
+
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-from .widgets import VelScatterCanvas
 from ..utils.console_utils import info_message, warning_message, success_message, summary_statistics
+
+class VelScatterCanvas(FigureCanvas):
+    """Canvas for displaying velocity scatter plots."""
+    
+    def __init__(self, parent=None, fc='none'):
+        """Initialize canvas with a figure."""
+        from matplotlib.figure import Figure
+        fig = Figure(facecolor=fc)
+        self.ax = fig.add_subplot(111)
+        super().__init__(fig)
+        self.setParent(parent)
 
 class VelocityDistributionWindow(QDialog):
     """Window for displaying velocity distribution."""
@@ -90,8 +104,62 @@ def plot_velocity_distribution(canvas, cdp, twt, vel, console=None, window_size=
             zorder=10
         )
 
+    # Calculate regression parameters if not provided
+    if regression_params is None:
+        regression_params = {}
+        
+        try:
+            # Calculate linear regression (V = v0 + k*TWT)
+            # For regression, we need to reorganize our model from V = v0 + k*TWT to TWT = (V - v0)/k
+            # This means using vel as x and twt as y, then converting the parameters
+            if len(twt) > 2:  # Need at least 3 points for meaningful regression
+                # First approach: Linear regression where V = v0 + k*TWT
+                slope, intercept, r_value, p_value, std_err = stats.linregress(twt, vel)
+                
+                linear_params = {
+                    'v0': intercept,
+                    'k': slope,
+                    'r2': r_value**2
+                }
+                regression_params['linear'] = linear_params
+                
+                if console:
+                    info_message(console, f"Linear regression: V = {intercept:.1f} + {slope:.3f}·TWT (R²: {r_value**2:.3f})")
+            
+            # Calculate logarithmic regression (V = v0 + k*ln(TWT))
+            if len(twt) > 2 and np.all(twt > 0):  # Need positive values for log
+                # Define logarithmic function: V = v0 + k*ln(TWT)
+                def log_func(x, v0, k):
+                    return v0 + k * np.log(x)
+                
+                # Fit the function to our data
+                try:
+                    popt, pcov = curve_fit(log_func, twt, vel)
+                    v0, k = popt
+                    
+                    # Calculate R² for logarithmic fit
+                    residuals = vel - log_func(twt, v0, k)
+                    ss_res = np.sum(residuals**2)
+                    ss_tot = np.sum((vel - np.mean(vel))**2)
+                    r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+                    
+                    log_params = {
+                        'v0': v0,
+                        'k': k,
+                        'r2': r_squared
+                    }
+                    regression_params['logarithmic'] = log_params
+                    
+                    if console:
+                        info_message(console, f"Logarithmic regression: V = {v0:.1f} + {k:.1f}·ln(TWT) (R²: {r_squared:.3f})")
+                except:
+                    if console:
+                        warning_message(console, "Could not fit logarithmic regression. Skipping.")
+        except Exception as e:
+            if console:
+                warning_message(console, f"Error calculating regression parameters: {str(e)}")
 
-    # Add regression lines if parameters are provided
+    # Add regression lines if parameters are available
     if regression_params:
         # Range for velocity values
         vel_range = max(vel) - min(vel)

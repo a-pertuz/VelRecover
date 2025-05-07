@@ -1,33 +1,11 @@
-"""User interface components for VelRecover."""
+"""UI module for VelRecover application."""
 
-# UI components
-from .widgets import ProgressStatusBar
-from .dialogs import (
-    FirstRunDialog, 
-    AboutDialog, 
-    HelpDialog, 
-    ModelSelectionDialog, 
-    CustomLinearModelDialog
-)
+from ._0_welcome_tab import WelcomeTab
+from ._1_load_data_tab import LoadDataTab
+from ._2_edit_tab import EditTab
+from ._3_interpolate_tab import InterpolateTab
+from .main_window import VelRecover
+from .navigation_panel import NavigationPanel
+from .tab_container import TabContainer
 
-# Distribution visualization
-from .distribution_display import (
-    VelocityDistributionWindow,
-    plot_velocity_distribution
-)
-
-# SEGY visualization
-from .segy_display import SegyDisplayWindow
-
-__all__ = [
-    # UI components
-    'ProgressStatusBar', 
-    'FirstRunDialog', 'AboutDialog', 'HelpDialog',
-    'ModelSelectionDialog', 'CustomLinearModelDialog',
-    
-    # Distribution visualization
-    'VelocityDistributionWindow', 'plot_velocity_distribution',
-    
-    # SEGY visualization
-    'SegyDisplayWindow'
-]
+__version__ = "1.0.0"

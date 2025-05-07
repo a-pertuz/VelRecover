@@ -20,17 +20,19 @@ def load_segy_data(segy_file_path, status_callback=None):
     
     # Calculate TWT range
     dt_ms = dt / 1000.0  # Convert microseconds to milliseconds
-    TWT_start = delay  # Use delay as starting time
-    TWT_end = TWT_start + (nsamples - 1) * dt_ms
-    TWT_range = np.linspace(TWT_start, TWT_end, nsamples)
-    CDP_range = np.arange(ntraces)
+    twt_start = delay  # Use delay as starting time
+    twt_end = twt_start + (nsamples - 1) * dt_ms
+    twt_range = np.linspace(twt_start, twt_end, nsamples)
+    
+    # Use 1-based indexing for trace range to match trace numbers
+    trace_range = np.arange(1, ntraces + 1)
     
     if status_callback:
-        status_callback(10, f"Processing {len(CDP_range)} CDPs and {len(TWT_range)} TWTs...")
+        status_callback(10, f"Processing {len(trace_range)} traces and {len(twt_range)} TWTs...")
         
     return {
-        'TWT_range': TWT_range,
-        'CDP_range': CDP_range,
+        'twt_range': twt_range,
+        'trace_range': trace_range,
         'ntraces': ntraces,
         'nsamples': nsamples,
         'dt_ms': dt_ms,
@@ -52,21 +54,21 @@ def load_velocity_data(text_file_path, status_callback=None):
     
     # Load data with appropriate delimiter
     data = np.loadtxt(text_file_path, delimiter=delimiter, skiprows=1)
-    CDP, TWT, VEL = data[:, 0], data[:, 1], data[:, 2]
+    vel_traces, vel_twts, vel_values = data[:, 0], data[:, 1], data[:, 2]
     
-    return CDP, TWT, VEL
+    return vel_traces, vel_twts, vel_values
 
-def create_grid(CDP_range, TWT_range, ntraces, nsamples, status_callback=None):
+def create_grid(trace_range, twt_range, ntraces, nsamples, status_callback=None):
     """Create grid for interpolation based on SEGY dimensions."""
     if status_callback:
         status_callback(30, "Creating interpolation grid...")
 
     # Generate grid using SEGY dimensions
-    CDP_grid, TWT_grid = np.meshgrid(
-        np.linspace(CDP_range[0], CDP_range[-1], ntraces),
-        np.linspace(TWT_range[0], TWT_range[-1], nsamples)
+    vel_traces_grid, vel_twts_grid = np.meshgrid(
+        np.linspace(trace_range[0], trace_range[-1], ntraces),
+        np.linspace(twt_range[0], twt_range[-1], nsamples)
     )
-    return CDP_grid, TWT_grid
+    return vel_traces_grid, vel_twts_grid
 
 def calculate_r2(y_true, y_pred):
     """Calculate the coefficient of determination (R²)"""
@@ -81,30 +83,29 @@ def calculate_r2(y_true, y_pred):
 
 def run_interpolation(text_file_path=None, segy_file_path=None, interpolation_func=None, 
                      additional_args=None, status_callback=None, cancel_check=None, 
-                     cdp=None, twt=None, vel=None, console=None):
+                     vel_traces=None, vel_twts=None, vel_values=None, console=None):
     """Common implementation for all interpolation methods."""
     try:
         # Load SEGY data
         segy_data = load_segy_data(segy_file_path, status_callback)
-        TWT_range = segy_data['TWT_range']
-        CDP_range = segy_data['CDP_range']
+        twt_range = segy_data['twt_range']
+        trace_range = segy_data['trace_range']
         ntraces = segy_data['ntraces']
         
         # Use provided velocity data or load from file
-        if cdp is not None and twt is not None and vel is not None:
-            CDP = cdp
-            TWT = twt
-            VEL = vel
+        if vel_traces is not None and vel_twts is not None and vel_values is not None:
+            # Use the provided data
+            pass
         else:
             # Check if text file is provided
             if not text_file_path:
                 return {'error': "No velocity data provided and no text file path specified"}
                 
             # Load velocity data from file
-            CDP, TWT, VEL = load_velocity_data(text_file_path, status_callback)
+            vel_traces, vel_twts, vel_values = load_velocity_data(text_file_path, status_callback)
         
         # Create interpolation grid
-        CDP_grid, TWT_grid = create_grid(CDP_range, TWT_range, ntraces, segy_data['nsamples'], status_callback)
+        vel_traces_grid, vel_twts_grid = create_grid(trace_range, twt_range, ntraces, segy_data['nsamples'], status_callback)
         
         # Check for cancellation
         if cancel_check and cancel_check():
@@ -112,9 +113,9 @@ def run_interpolation(text_file_path=None, segy_file_path=None, interpolation_fu
         
         # Prepare arguments
         args = [
-            CDP, TWT, VEL, 
-            CDP_grid, TWT_grid, 
-            CDP_range, TWT_range, 
+            vel_traces, vel_twts, vel_values, 
+            vel_traces_grid, vel_twts_grid, 
+            trace_range, twt_range, 
             status_callback, cancel_check
         ]
         
@@ -131,11 +132,11 @@ def run_interpolation(text_file_path=None, segy_file_path=None, interpolation_fu
         
         # Add base data to the result
         result.update({
-            'CDP': CDP,
-            'TWT': TWT,
-            'VEL': VEL,
-            'CDP_grid': CDP_grid,
-            'TWT_grid': TWT_grid,
+            'vel_traces': vel_traces,
+            'vel_twts': vel_twts,
+            'vel_values': vel_values,
+            'vel_traces_grid': vel_traces_grid,
+            'vel_twts_grid': vel_twts_grid,
             'ntraces': ntraces,
             'cancelled': False
         })

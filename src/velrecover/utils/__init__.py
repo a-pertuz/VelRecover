@@ -1,53 +1,11 @@
-"""Utility functions for VelRecover."""
+"""Utility modules for VelRecover."""
 
+# Import console utils functions to make them available from utils package
 from .console_utils import (
-    initialize_log_file, close_log_file, section_header,
-    success_message, error_message, info_message,
-    warning_message, summary_statistics
+    section_header, success_message, error_message, 
+    warning_message, info_message, progress_message,
+    summary_statistics, initialize_log_file, close_log_file
 )
 
-from .io_utils import (
-    initialize_directories, copy_tutorial_files, copy_data_between_directories,
-    save_velocity_text_data, save_velocity_binary_data
-)
-
-from .ui_utils import (
-    create_progress_callback, show_error_dialog,
-    track_operation_time, confirm_action
-)
-
-from ..core.gauss_blur import apply_gaussian_blur
-
-# Import VelocityData class
-from .VelocityData import VelocityData
-
-# Import interpolation utilities
-from .interpolation_utils import (
-    load_text_data, load_segy_file,
-    interpolate, apply_smoothing, calculate_regression_params
-)
-
-__all__ = [
-    # Console utilities
-    'initialize_log_file', 'close_log_file', 'section_header',
-    'success_message', 'error_message', 'info_message',
-    'warning_message', 'summary_statistics',
-    
-    # I/O utilities
-    'initialize_directories', 'copy_tutorial_files', 'copy_data_between_directories',
-    'save_velocity_text_data', 'save_velocity_binary_data',
-    
-    # UI utilities
-    'create_progress_callback', 'show_error_dialog',
-    'track_operation_time', 'confirm_action',
-    
-    # General utilities
-    'apply_gaussian_blur',
-    
-    # VelocityData class
-    'VelocityData',
-    
-    # Interpolation utilities
-    'load_text_data', 'load_segy_file',
-    'interpolate', 'apply_smoothing', 'calculate_regression_params'
-]
+# Import resource utilities
+from .resource_utils import copy_tutorial_files

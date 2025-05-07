@@ -7,12 +7,12 @@ from scipy.interpolate import RBFInterpolator
 from ..utils.console_utils import info_message, warning_message, success_message
 
 
-def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, nsamples=None, 
+def two_step_interpolation(vel_traces, vel_twts, vel_values, trace_range, twt_range, ntraces=None, nsamples=None, 
                           dt_ms=4.0, delay=0.0, console=None, blur_value=2.5):
     """
     Perform two-step interpolation:
-    1. Extrapolate velocities for each CDP to cover the full TWT range using RBF interpolation
-    2. Use nearest neighbor for missing CDPs and then apply Gaussian smoothing
+    1. Extrapolate velocities for each trace to cover the full TWT range using RBF interpolation
+    2. Use nearest neighbor for missing traces and then apply Gaussian smoothing
     
     Parameters:
         blur_value: Controls the Gaussian blur kernel size (higher = smoother transitions)
@@ -20,68 +20,68 @@ def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, ns
     if console:
         info_message(console, "Starting two-step interpolation...")
     
-    min_cdp, max_cdp = cdp_range
+    min_trace, max_trace = trace_range
     min_twt, max_twt = twt_range
     
     # Create a full grid using exact dimensions from SEGY file if provided
     if ntraces is not None and nsamples is not None:
-        cdp_full = np.linspace(min_cdp, max_cdp, ntraces)
-        twt_full = np.linspace(min_twt, max_twt, nsamples)
+        traces_full = np.linspace(min_trace, max_trace, ntraces)
+        twts_full = np.linspace(min_twt, max_twt, nsamples)
     else:
-        # Ensure grid includes the actual CDP values from the data
-        data_min_cdp = np.min(cdp)
-        data_max_cdp = np.max(cdp)
+        # Ensure grid includes the actual trace values from the data
+        data_min_trace = np.min(vel_traces)
+        data_max_trace = np.max(vel_traces)
         
         # Use the wider range
-        min_cdp = min(min_cdp, data_min_cdp)
-        max_cdp = max(max_cdp, data_max_cdp)
+        min_trace = min(min_trace, data_min_trace)
+        max_trace = max(max_trace, data_max_trace)
         
-        cdp_step = 1.0  # Use 1.0 CDP spacing
+        trace_step = 1.0  # Use 1.0 trace spacing
         twt_step = min(5.0, (max_twt - min_twt) / 200)  # Use 5ms or smaller if needed
         
-        cdp_full = np.arange(min_cdp, max_cdp + cdp_step, cdp_step)
-        twt_full = np.arange(min_twt, max_twt + twt_step, twt_step)
+        traces_full = np.arange(min_trace, max_trace + trace_step, trace_step)
+        twts_full = np.arange(min_twt, max_twt + twt_step, twt_step)
     
     # Create output grids
-    cdp_grid, twt_grid = np.meshgrid(cdp_full, twt_full)
-    vel_grid = np.zeros_like(cdp_grid, dtype=float)
-    vel_grid.fill(np.nan)  # Initialize with NaN
+    vel_traces_grid, vel_twts_grid = np.meshgrid(traces_full, twts_full)
+    vel_values_grid = np.zeros_like(vel_traces_grid, dtype=float)
+    vel_values_grid.fill(np.nan)  # Initialize with NaN
     
-    # Step 1: Interpolate for each unique CDP using RBF
-    unique_cdps = np.unique(cdp)
+    # Step 1: Interpolate for each unique trace using RBF
+    unique_traces = np.unique(vel_traces)
     
     if console:
-        info_message(console, f"Step 1: Interpolating velocities for {len(unique_cdps)} CDPs...")
+        info_message(console, f"Step 1: Interpolating velocities for {len(unique_traces)} traces...")
     
-    # Create mapping from unique CDPs to column indices
-    cdp_to_col_idx = {}
-    for i, grid_cdp in enumerate(cdp_full):
-        distances = np.abs(unique_cdps - grid_cdp)
-        if np.min(distances) <= 0.5:  # If within 0.5 of a unique CDP
-            closest_cdp = unique_cdps[np.argmin(distances)]
-            if closest_cdp not in cdp_to_col_idx:
-                cdp_to_col_idx[closest_cdp] = i
+    # Create mapping from unique traces to column indices
+    trace_to_col_idx = {}
+    for i, grid_trace in enumerate(traces_full):
+        distances = np.abs(unique_traces - grid_trace)
+        if np.min(distances) <= 0.5:  # If within 0.5 of a unique trace
+            closest_trace = unique_traces[np.argmin(distances)]
+            if closest_trace not in trace_to_col_idx:
+                trace_to_col_idx[closest_trace] = i
     
-    # Process each unique CDP
-    for unique_cdp in unique_cdps:
-        cdp_mask = cdp == unique_cdp
-        cdp_twt = twt[cdp_mask]
-        cdp_vel = vel[cdp_mask]
+    # Process each unique trace
+    for unique_trace in unique_traces:
+        trace_mask = vel_traces == unique_trace
+        trace_twts = vel_twts[trace_mask]
+        trace_vals = vel_values[trace_mask]
         
-        if len(cdp_twt) < 2:
+        if len(trace_twts) < 2:
             if console:
-                warning_message(console, f"CDP {unique_cdp} has only {len(cdp_twt)} points. Skipping.")
+                warning_message(console, f"Trace {unique_trace} has only {len(trace_twts)} points. Skipping.")
             continue
         
         # Sort data points by TWT for proper interpolation
-        sort_idx = np.argsort(cdp_twt)
-        cdp_twt = cdp_twt[sort_idx]
-        cdp_vel = cdp_vel[sort_idx]
+        sort_idx = np.argsort(trace_twts)
+        trace_twts = trace_twts[sort_idx]
+        trace_vals = trace_vals[sort_idx]
         
         try:
             # Reshape for RBF interpolator
-            points = cdp_twt.reshape(-1, 1)
-            values = cdp_vel
+            points = trace_twts.reshape(-1, 1)
+            values = trace_vals
 
             # Create the RBF interpolator
             rbf_interpolator = RBFInterpolator(points, values, 
@@ -89,41 +89,41 @@ def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, ns
                                             smoothing=10)
 
             # Evaluate at desired points
-            query_points = twt_full.reshape(-1, 1)
+            query_points = twts_full.reshape(-1, 1)
             extrapolated_vel = rbf_interpolator(query_points)
             
             # Ensure no negative velocities
-            extrapolated_vel = np.maximum(extrapolated_vel, np.min(cdp_vel) * 0.5)
+            extrapolated_vel = np.maximum(extrapolated_vel, np.min(trace_vals) * 0.5)
             
-            # Find column index for this CDP
-            if unique_cdp in cdp_to_col_idx:
-                col_idx = cdp_to_col_idx[unique_cdp]
-                vel_grid[:, col_idx] = extrapolated_vel
+            # Find column index for this trace
+            if unique_trace in trace_to_col_idx:
+                col_idx = trace_to_col_idx[unique_trace]
+                vel_values_grid[:, col_idx] = extrapolated_vel
             else:
                 # Find closest matching column
-                col_idx = np.abs(cdp_full - unique_cdp).argmin()
-                vel_grid[:, col_idx] = extrapolated_vel
+                col_idx = np.abs(traces_full - unique_trace).argmin()
+                vel_values_grid[:, col_idx] = extrapolated_vel
         except Exception as e:
             if console:
-                warning_message(console, f"RBF interpolation failed for CDP {unique_cdp}: {str(e)}")
+                warning_message(console, f"RBF interpolation failed for trace {unique_trace}: {str(e)}")
     
-    # Step 2: Fill missing CDPs using nearest neighbor, then apply Gaussian blur
+    # Step 2: Fill missing traces using nearest neighbor, then apply Gaussian blur
     if console:
-        info_message(console, "Step 2: Filling missing CDPs using nearest neighbor + Gaussian smoothing...")
+        info_message(console, "Step 2: Filling missing traces using nearest neighbor + Gaussian smoothing...")
     
     # Find columns where we have valid data
     valid_cols = []
-    for j in range(vel_grid.shape[1]):
-        if not np.all(np.isnan(vel_grid[:, j])):
+    for j in range(vel_values_grid.shape[1]):
+        if not np.all(np.isnan(vel_values_grid[:, j])):
             valid_cols.append(j)
     
     if len(valid_cols) <= 1:
         if console:
-            warning_message(console, "Not enough valid CDPs for interpolation")
-        return cdp_grid, twt_grid, vel_grid
+            warning_message(console, "Not enough valid traces for interpolation")
+        return vel_traces_grid, vel_twts_grid, vel_values_grid
     
     # First pass: Use nearest neighbor to fill all gaps
-    for j in range(vel_grid.shape[1]):
+    for j in range(vel_values_grid.shape[1]):
         if j in valid_cols:
             continue  # Skip columns that already have data
         
@@ -132,13 +132,13 @@ def two_step_interpolation(cdp, twt, vel, cdp_range, twt_range, ntraces=None, ns
         nearest_col = valid_cols[np.argmin(distances)]
         
         # Copy data from nearest column
-        vel_grid[:, j] = vel_grid[:, nearest_col]
+        vel_values_grid[:, j] = vel_values_grid[:, nearest_col]
     
     # Second pass: Apply Gaussian blur to smooth transitions
     info_message(console, "Applying Gaussian smoothing with kernel size 251...")
     
-    vel_grid = cv2.GaussianBlur(vel_grid.astype(np.float32), (251, 251), 0)
+    vel_values_grid = cv2.GaussianBlur(vel_values_grid.astype(np.float32), (251, 251), 0)
     
-    success_message(console, f"Interpolation complete: {vel_grid.shape[1]} CDPs × {vel_grid.shape[0]} samples")
+    success_message(console, f"Interpolation complete: {vel_values_grid.shape[1]} traces × {vel_values_grid.shape[0]} samples")
     
-    return cdp_grid, twt_grid, vel_grid
+    return vel_traces_grid, vel_twts_grid, vel_values_grid
