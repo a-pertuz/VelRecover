@@ -801,6 +801,43 @@ QPushButton[text="Proceed to Results"]:disabled {
     color: #f0fff4;
 }
 
+QLabel[objectName^="feature_"], QLabel[objectName="workflow_steps"], QLabel[objectName="features_label"] {
+    color: #2d3748;
+    font-size: 11pt;
+}
+
+/* Welcome tab specific styling */
+#features_frame, #workflow_container {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+/* Headers for all tabs */
+QLabel[objectName="header_label"] {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #1a365d;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+QLabel[objectName="title_label"] {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #1a202c;
+    margin-bottom: 10px;
+    padding: 5px 0;
+    text-align: center;
+}
+
+/* Section titles for all tabs */
+QLabel[objectName="section_label"] {
+    font-size: 14pt;
+    font-weight: bold;
+    color: #2c5282;
+}
+
 /* Description text label */
 QLabel[objectName="description_label"] {
     font-size: 11pt;
@@ -969,6 +1006,12 @@ QLabel[objectName="tab_description"] {
     background-color: #4682b4;
 }
 
+#run_button:disabled {
+    background-color: #d3eaf7;
+    color: #a0aec0;
+    border-color: #b0d4e6;
+}
+
 /* Dist Button Styling */
 #dist_button {
     background-color: #fffacd; /* Light yellow */
@@ -985,6 +1028,12 @@ QLabel[objectName="tab_description"] {
 
 #dist_button:pressed {
     background-color: #ffd700;
+}
+
+#dist_button:disabled {
+    background-color: #fdf5d6;
+    color: #a0aec0;
+    border-color: #f5e8b5;
 }
 
 /* Reset Button Styling */
@@ -1005,6 +1054,12 @@ QLabel[objectName="tab_description"] {
     background-color: #dc143c;
 }
 
+#reset_button:disabled {
+    background-color: #f7c6c6;
+    color: #f0f0f0;
+    border-color: #f2a5a5;
+}
+
 /* Save Edits Button Styling */
 #save_edits_button {
     background-color: #90ee90; /* Light green */
@@ -1021,6 +1076,12 @@ QLabel[objectName="tab_description"] {
 
 #save_edits_button:pressed {
     background-color: #228b22;
+}
+
+#save_edits_button:disabled {
+    background-color: #d8f3d8;
+    color: #a0aec0;
+    border-color: #b5e0b5;
 }
 
 /* Continue Without Edits Button Styling */
@@ -1041,6 +1102,12 @@ QLabel[objectName="tab_description"] {
     background-color: #ff4500;
 }
 
+#continue_without_edits_button:disabled {
+    background-color: #f7c6c6;
+    color: #f0f0f0;
+    border-color: #f2a5a5;
+}
+
 /* Save Bin Button Styling */
 #save_bin_button {
     background-color: #90ee90; /* Light green */
@@ -1059,6 +1126,12 @@ QLabel[objectName="tab_description"] {
     background-color: #228b22;
 }
 
+#save_bin_button:disabled {
+    background-color: #d8f3d8;
+    color: #a0aec0;
+    border-color: #b5e0b5;
+}
+
 /* Save Txt Button Styling */
 #save_txt_button {
     background-color: #90ee90; /* Light green */
@@ -1075,4 +1148,10 @@ QLabel[objectName="tab_description"] {
 
 #save_txt_button:pressed {
     background-color: #228b22;
+}
+
+#save_txt_button:disabled {
+    background-color: #d8f3d8;
+    color: #a0aec0;
+    border-color: #b5e0b5;
 }

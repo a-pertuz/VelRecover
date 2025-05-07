@@ -2,8 +2,7 @@
 
 # Import all public functions from submodules
 from .base import (
-    load_segy_data, 
-    load_velocity_data, 
+
     create_grid,
     run_interpolation, 
     calculate_r2
@@ -27,7 +26,7 @@ from .rbf_models import (
 )
 
 from .two_step import (
-    two_step_interpolation
+    two_step_model
 )
 
 from .gauss_blur import (

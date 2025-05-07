@@ -23,7 +23,7 @@ from ..utils.velocity_distribution import VelocityDistributionWindow, plot_veloc
 from ..core.linear_models import custom_linear_model, best_linear_fit
 from ..core.logarithmic_models import custom_logarithmic_model, best_logarithmic_fit
 from ..core.rbf_models import interpolate_velocity_data_rbf
-from ..core.two_step import two_step_interpolation
+from ..core.two_step import two_step_model
 from ..core.gauss_blur import apply_gaussian_blur
 
 
@@ -182,7 +182,7 @@ class InterpolateTab(QWidget):
         """Create method selection and configuration panel."""
         group_box = QGroupBox("Interpolation Method")
         group_box.setObjectName("method_selection_group")
-        group_box.setMaximumHeight(150)
+        group_box.setMaximumHeight(120)
         
         # Main layout for the group box
         main_layout = QVBoxLayout(group_box)
@@ -210,6 +210,8 @@ class InterpolateTab(QWidget):
         
         for label, method_id in methods:
             self.method_dropdown.addItem(label, method_id)
+
+        self.method_dropdown.setCurrentIndex(4) # Default to RBF Interpolation
         
         self.method_dropdown.currentIndexChanged.connect(self._on_method_changed)
         dropdown_layout.addWidget(self.method_dropdown)
@@ -542,7 +544,7 @@ class InterpolateTab(QWidget):
         method = self._get_selected_method()
         info_message(self.console, f"Running interpolation using {self._get_method_display_name(method)}...")
         
-        # Extract velocity data using the edit tab's field names
+        # Extract velocity data from the velocity_data dictionary
         vel_traces = self.velocity_data.get('vel_traces', [])
         vel_twts = self.velocity_data.get('vel_twts', [])
         vel_values = self.velocity_data.get('vel_values', [])
@@ -552,16 +554,21 @@ class InterpolateTab(QWidget):
             error_message(self.console, "Velocity data is empty. Cannot perform interpolation.")
             return
         
-        # Extract trace and TWT range
+        # Calculate trace and TWT ranges
         trace_range = (np.min(vel_traces), np.max(vel_traces))
         twt_range = (np.min(vel_twts), np.max(vel_twts))
         
-        # Run the appropriate interpolation method
+        # Run the appropriate interpolation method using the already loaded data
         try:
             if method == "linear_best":
                 result = best_linear_fit(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    segy_file_path=self.velocity_data.get('segy_file_path'),
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
                     console=self.console
                 )
             
@@ -569,16 +576,27 @@ class InterpolateTab(QWidget):
                 v0 = self.v0_linear.value()
                 k = self.k_linear.value()
                 result = custom_linear_model(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    segy_file_path=self.velocity_data.get('segy_file_path'),
-                    v0=v0, k=k,
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
+                    v0=v0, 
+                    k=k,
                     console=self.console
                 )
             
             elif method == "log_best":
                 result = best_logarithmic_fit(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    segy_file_path=self.velocity_data.get('segy_file_path'),
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
                     console=self.console
                 )
             
@@ -586,45 +604,43 @@ class InterpolateTab(QWidget):
                 v0 = self.v0_log.value()
                 k = self.k_log.value()
                 result = custom_logarithmic_model(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    segy_file_path=self.velocity_data.get('segy_file_path'),
-                    v0=v0, k=k,
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
+                    v0=v0, 
+                    k=k,
                     console=self.console
                 )
             
             elif method == "rbf":
                 result = interpolate_velocity_data_rbf(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    segy_file_path=self.velocity_data.get('segy_file_path'),
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
                     console=self.console
                 )
             
             elif method == "two_step":
                 blur_value = self.blur_two_step.value()
-                
-                # Use SEGY dimensions for interpolation
-                info_message(self.console, f"Using SEGY dimensions: {self.ntraces} traces × {self.nsamples} samples")
-                
-                # Get the grid directly from the two-step method
-                vel_traces_grid, vel_twts_grid, vel_values_grid = two_step_interpolation(
-                    vel_traces=vel_traces, vel_twts=vel_twts, vel_values=vel_values,
-                    trace_range=trace_range, twt_range=twt_range,
-                    ntraces=self.ntraces, nsamples=self.nsamples,
-                    dt_ms=self.dt_ms, delay=self.delay,
+                result = two_step_model(
+                    vel_traces=vel_traces, 
+                    vel_twts=vel_twts, 
+                    vel_values=vel_values,
+                    twt_range=twt_range,
+                    trace_range=trace_range,
+                    ntraces=self.ntraces,
+                    nsamples=self.nsamples,
                     blur_value=blur_value,
                     console=self.console
                 )
-                
-                # Create a result dictionary similar to other methods
-                result = {
-                    'vel_traces': vel_traces,
-                    'vel_twts': vel_twts,
-                    'vel_values': vel_values,
-                    'vel_traces_grid': vel_traces_grid,
-                    'vel_twts_grid': vel_twts_grid,
-                    'vel_values_grid': vel_values_grid,
-                    'model_type': 'Two-Step Interpolation'
-                }
             
             else:
                 error_message(self.console, f"Unknown interpolation method: {method}")
