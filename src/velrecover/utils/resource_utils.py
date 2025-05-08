@@ -21,7 +21,7 @@ def copy_tutorial_files(base_dir):
             tutorial_dir = str(tutorial_path)
         
         if os.path.exists(tutorial_dir):
-            for folder in ["SEGY", "VELS"]:
+            for folder in ["SEGY", "VELS", "VELS/2D", "VELS/RAW"]:
                 src_folder = os.path.join(tutorial_dir, folder)
                 dst_folder = os.path.join(base_dir, folder)
                 
@@ -30,18 +30,11 @@ def copy_tutorial_files(base_dir):
                     os.makedirs(dst_folder, exist_ok=True)
                     
                     # Copy files from source folder to destination folder
-                    for item in os.listdir(src_folder):
-                        src_path = os.path.join(src_folder, item)
-                        dst_path = os.path.join(dst_folder, item)
-                        
+                    for file in os.listdir(src_folder):
+                        src_path = os.path.join(src_folder, file)
+                        dst_path = os.path.join(dst_folder, file)
                         if os.path.isfile(src_path):
                             shutil.copy2(src_path, dst_path)
-                        elif os.path.isdir(src_path):
-                            # Recursively copy subdirectories
-                            if os.path.exists(dst_path):
-                                shutil.rmtree(dst_path)
-                            shutil.copytree(src_path, dst_path)
-            
             print(f"Tutorial files copied successfully from {tutorial_dir}")
         else:
             print(f"Tutorial directory not found: {tutorial_dir}")
