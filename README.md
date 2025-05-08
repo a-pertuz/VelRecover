@@ -1,12 +1,14 @@
 # VelRecover
 
-A Python tool for interpolating 2D seismic velocity data from sparse velocity analysis found in seismic sections. VelRecover provides multiple interpolation algorithms to create complete velocity fields from sparse velocity picks, with an intuitive GUI for visualization and quality control.
-
 [![DOI](https://zenodo.org/badge/DOI/zenodo.15053268.svg)](https://doi.org/10.5281/zenodo.15053268)
 ![PyPI](https://img.shields.io/pypi/v/velrecover)
 ![Last Commit](https://img.shields.io/github/last-commit/a-pertuz/velrecover)
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-yellow.svg)
 ![Python Version](https://img.shields.io/badge/python-3.8+-green)
+
+A Python tool for interpolating 2D seismic velocity data from sparse velocity analysis found in seismic sections. VelRecover provides multiple interpolation algorithms to create complete velocity fields from sparse velocity picks, with an intuitive GUI for visualization and quality control.
+
+VelRecover is part of the [REVSEIS](https://a-pertuz.github.io/REVSEIS/index.html) suite. A collection of open source tools to digitize and enhance vintage seismic sections. See [REVSEIS](https://a-pertuz.github.io/REVSEIS/index.html) for more information.
 
 ## Features
 
@@ -26,6 +28,9 @@ If you use this software in your research, please cite it as:
 ```
 Pertuz, A. (2025). VelRecover: A Python tool for interpolating sparse 2D seismic velocity data from vintage seismic sections. Zenodo. https://doi.org/10.5281/zenodo.15053268
 ```
+
+Check the Zenodo repository: https://doi.org/10.5281/zenodo.15053268
+
 
 ## Installation
 

@@ -35,6 +35,7 @@ def copy_tutorial_files(base_dir):
                         dst_path = os.path.join(dst_folder, file)
                         if os.path.isfile(src_path):
                             shutil.copy2(src_path, dst_path)
+                            
             print(f"Tutorial files copied successfully from {tutorial_dir}")
         else:
             print(f"Tutorial directory not found: {tutorial_dir}")

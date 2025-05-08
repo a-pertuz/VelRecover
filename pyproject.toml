@@ -12,7 +12,15 @@ license = {text = "GNU GPL-3.0"}
 authors = [
     {name = "Alejandro Pertuz", email = "apertuz@ucm.es"}
 ]
-
+keywords = ["seismic", "digitization", "velocity", "geophysics"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Geophysics",
+]
 dependencies = [
     "pyside6>=6.8.0",
     "numpy>=1.24.0",
@@ -22,12 +30,14 @@ dependencies = [
     "opencv-python>=4.7.0",
     "appdirs>=1.4.4",
     "seisio>=1.2.0",
+    "seisplot>=1.2.0",
     "setuptools>=65.0.0"
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/a-pertuz/velrecover"
-"Bug Tracker" = "https://github.com/a-pertuz/velrecover/issues"
+"Documentation" = "https://a-pertuz.github.io/REVSEIS/index.html"
+"Source Code" = "https://github.com/a-pertuz/VelRecover"
+"DOI" = "https://doi.org/10.5281/zenodo.15053268"
 
 
 [project.scripts]
