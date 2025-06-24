@@ -9,19 +9,10 @@ class SeismicDisplayManager:
     """Class for managing seismic data display and velocity overlays."""
     
     def __init__(self, ax, console=None):
-        """
-        Initialize the SeismicDisplayManager.
-        
-        Parameters:
-        -----------
-        ax : matplotlib.axes.Axes
-            The matplotlib axis to plot on
-        console : QTextEdit, optional
-            Console for logging messages
-        """
+
         self.ax = ax
         self.console = console
-        self.perc = 99  # Default percentile for display
+        self.perc = 75
         self.seismic_data = None
         self.vel_traces = None
         self.vel_twts = None
@@ -35,19 +26,7 @@ class SeismicDisplayManager:
         self.ntraces = None
     
     def load_segy(self, segy_file_path):
-        """
-        Load SEGY data from file.
-        
-        Parameters:
-        -----------
-        segy_file_path : str
-            Path to the SEGY file
-            
-        Returns:
-        --------
-        dict
-            Dictionary with SEGY metadata
-        """
+
         try:
             # Load the SEGY data
             sio = seisio.input(segy_file_path)
@@ -79,38 +58,14 @@ class SeismicDisplayManager:
             raise
     
     def load_velocity_picks(self, vel_traces, vel_twts, vel_values, color_range=None):
-        """
-        Load velocity pick data.
-        
-        Parameters:
-        -----------
-        vel_traces : array-like
-            Array of trace numbers
-        vel_twts : array-like
-            Array of two-way travel times
-        vel_values : array-like
-            Array of velocity values
-        color_range : tuple, optional
-            Tuple of (min, max) values for the velocity color scale
-        """
         self.vel_traces = vel_traces
         self.vel_twts = vel_twts
         self.vel_values = vel_values
         self.vel_color_range = color_range
     
     def display(self, redraw_picks=True, clear_ax=True, show_colorbar=True):
-        """
-        Display the seismic data and velocity picks.
-        
-        Parameters:
-        -----------
-        redraw_picks : bool, optional
-            Whether to redraw the velocity picks (default: True)
-        clear_ax : bool, optional
-            Whether to clear the axis before plotting (default: True)
-        show_colorbar : bool, optional
-            Whether to show the colorbar (default: True)
-        """
+        """ Display the seismic data and velocity picks. """
+
         if self.seismic_data is None:
             if self.console:
                 self.console.append("No seismic data to display")
@@ -198,12 +153,5 @@ class SeismicDisplayManager:
         self.ax.set_title("No seismic data loaded")
         
     def set_percentile(self, perc):
-        """
-        Set the percentile value for seismic amplitude scaling.
-        
-        Parameters:
-        -----------
-        perc : float
-            Percentile value (0-100)
-        """
+        """ Set the percentile value for seismic amplitude scaling."""
         self.perc = perc

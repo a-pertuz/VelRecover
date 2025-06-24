@@ -97,7 +97,6 @@ class InterpolateTab(QWidget):
         
         # Method selection and configuration
         method_group = self._create_method_selection()
-        method_group.setFixedHeight(200)  # Fix the height of the method group box
         layout.addWidget(method_group)
         
         # Main content area with visualization
@@ -182,7 +181,6 @@ class InterpolateTab(QWidget):
         """Create method selection and configuration panel."""
         group_box = QGroupBox("Interpolation Method")
         group_box.setObjectName("method_selection_group")
-        group_box.setMaximumHeight(120)
         
         # Main layout for the group box
         main_layout = QVBoxLayout(group_box)
@@ -504,20 +502,17 @@ class InterpolateTab(QWidget):
         self.interpolation_overlay = self.ax.imshow(
             vel_values_grid, cmap='jet', aspect='auto',
             extent=[x_min, x_max, y_min, y_max],
-            alpha=0.7,  # Semi-transparent overlay
-            vmin=vmin, vmax=vmax,  # Use consistent color range
-            zorder=5  # Make sure it's above SEGY but below picks
+            alpha=0.5,  
+            vmin=vmin, vmax=vmax,  
+            zorder=5  
         )
         
         info_message(self.console, f"Displayed interpolation overlay with axis limits: x=[{x_min}, {x_max}], y=[{y_min}, {y_max}]")
         
-        # Update or add colorbar - we don't need a new one since we already have one
-        # with the same color scale, but we'll update it to reflect the overlay
         if self.velocity_colorbar is not None:
             try:
                 self.velocity_colorbar.update_normal(self.interpolation_overlay)
             except (KeyError, AttributeError):
-                # If updating fails, create a new one
                 try:
                     self.velocity_colorbar.remove()
                 except (KeyError, AttributeError):
@@ -554,10 +549,13 @@ class InterpolateTab(QWidget):
             error_message(self.console, "Velocity data is empty. Cannot perform interpolation.")
             return
         
-        # Calculate trace and TWT ranges
-        trace_range = (np.min(vel_traces), np.max(vel_traces))
-        twt_range = (np.min(vel_twts), np.max(vel_twts))
+        # Calculate trace and TWT ranges from SEGY dimensions
+        trace_range = (0, self.ntraces - 1)
+        twt_range = (self.delay, self.delay + (self.nsamples - 1) * self.dt_ms)
         
+        info_message(self.console, f"Using trace range {trace_range} and TWT range {twt_range} from SEGY dimensions")
+
+
         # Run the appropriate interpolation method using the already loaded data
         try:
             if method == "linear_best":

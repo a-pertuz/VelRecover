@@ -7,8 +7,8 @@ def apply_gaussian_blur(vel_grid, blur_value):
     """Apply Gaussian blur to velocity grid."""
     
     # Convert blur value to integer kernel size
-    # Ensure blur value is an integer, odd and at least 3
-    kernel_size = int(max(3, blur_value * 2 + 1))
+    # Ensure blur value is an integer, odd and at least 3. Scale it x10 for better results
+    kernel_size = int(max(3, blur_value * 20 + 1))
     if kernel_size % 2 == 0:
         kernel_size += 1
     

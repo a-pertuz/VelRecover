@@ -14,9 +14,6 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-import seisio
-import seisplot
-
 from ..utils.visualization_utils import SeismicDisplayManager
 from ..utils.velocity_distribution import VelocityDistributionWindow, plot_velocity_distribution
 from ..utils.console_utils import (
@@ -229,14 +226,7 @@ class LoadDataTab(QWidget):
                     error_message(self.console, f"Failed to load velocity file: {str(e)}")
     
     def _parse_velocity_file(self, file_path):
-        """
-        Parse the velocity file with three columns: trace, twt, velocity.
-        
-        Returns:
-        --------
-        tuple
-            (traces, twts, velocities)
-        """
+        """ Parse the velocity file with three columns: trace, twt, velocity"""
         try:
             # Load the velocity data
             # Try to auto-detect delimiter from common formats

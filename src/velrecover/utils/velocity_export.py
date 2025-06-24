@@ -3,7 +3,9 @@
 import os
 import numpy as np
 import pandas as pd
-import seisio  # Assuming this is the library used for SEGY operations
+from scipy.interpolate import griddata
+import seisio  
+from ..utils.console_utils import info_message, error_message, success_message
 
 def save_velocity_text_data(config, segy_file_path, cdp_grid, twt_grid, vel_grid):
     """Save interpolated velocity data to text file."""
@@ -103,9 +105,6 @@ def save_velocity_binary_data(config, segy_file_path, vel_grid):
         
         # Check if the velocity grid has the correct dimensions
         if vel_grid.shape[0] != nsamples or vel_grid.shape[1] != ntraces:
-            # Log warning about dimension mismatch and resample
-            from scipy.interpolate import griddata
-            import numpy as np
             
             # Create source and target grids
             source_shape = vel_grid.shape
@@ -126,9 +125,12 @@ def save_velocity_binary_data(config, segy_file_path, vel_grid):
             
             # Use the resampled grid
             vel_grid = resampled_vel_grid
+
+            info_message(f"Resampled velocity grid to match SEGY dimensions: {nsamples} samples, {ntraces} traces.")
         
-        # Save binary data with correct float32 format
+        vel_grid = vel_grid.T # Transpose to have a v(t,x) file format
         vel_grid.astype('float32').tofile(output_path)
+
         
         return {
             'success': True,
