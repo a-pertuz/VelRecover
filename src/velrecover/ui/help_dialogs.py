@@ -59,8 +59,7 @@ class AboutDialog(QDialog):
         
         # Description text with better styling
         description = QLabel(
-            "A Python tool for loading, editing, interpolating,\n"
-            "and saving velocity fields."
+            "A Python tool for the interpolation of velocity models from sparse velocity picks in seismic reflection sections.\n"
         )
         description.setAlignment(Qt.AlignCenter)
         description.setWordWrap(True)
@@ -70,7 +69,7 @@ class AboutDialog(QDialog):
         license_frame = QFrame()
         license_layout = QVBoxLayout(license_frame)
         
-        license_info = QLabel("Released under the MIT License")
+        license_info = QLabel("Released under the GNU General Public License v3.0")
         license_info.setAlignment(Qt.AlignCenter)
         license_layout.addWidget(license_info)
         
@@ -96,7 +95,7 @@ class FirstRunDialog(QDialog):
         screen_width = min(screen.width(), 1920)
         screen_height = min(screen.height(), 1080)
         window_width = int(screen_width * 0.3)
-        window_height = int(screen_height * 0.45)  # Slightly taller for better spacing
+        window_height = int(screen_height * 0.45)  
         pos_x = (screen_width - window_width) // 2
         pos_y = (screen_height - window_height) // 2
         self.setGeometry(pos_x, pos_y, window_width, window_height)
@@ -243,241 +242,141 @@ class HelpDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("How to Use VelRecover")    
-        
-        # Fix window sizing and positioning
         screen = QApplication.primaryScreen().geometry()
         screen_width = min(screen.width(), 1920)
         screen_height = min(screen.height(), 1080)
-        window_width = int(screen_width * 0.4)  # Slightly wider for better readability
-        window_height = int(screen_height * 0.75)  # Not too tall
-        pos_x = (screen_width - window_width) // 2
-        pos_y = (screen_height - window_height) // 2
-        self.setGeometry(pos_x, pos_y, window_width, window_height)
+        pos_x = int(screen_width * 0.45 + 20)
+        pos_y = int(screen_height * 0.15)
+        window_width = int(screen_width * 0.3)
+        window_height = int(screen_height * 0.85)
+        self.setGeometry(pos_x, pos_y, window_width, window_height)          
         
-        # Main layout
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(15)
+        # Create scroll area
+        scroll = QWidget()
+        scroll_layout = QVBoxLayout(scroll)
         
-        # Header
-        header_container = QWidget()
-        header_layout = QHBoxLayout(header_container)
-        header_layout.setContentsMargins(0, 0, 0, 0)
+        # Add content
+        msg = """
+        <h1 style="color:#2B66CC; text-align:center;">Welcome to VelRecover</h1>
+        <h3 style="text-align:center;">A GUI for Velocity Model Interpolation</h3>
         
-        # Title
-        title = QLabel("VelRecover Help Guide")
-        title.setFont(QFont("Arial", 18, QFont.Bold))
-        header_layout.addWidget(title)
+        <hr>
         
-        # Separator
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Sunken)
+        <h2>📋 Quick Start Guide</h2>
+        <p>VelRecover allows you to load, edit, interpolate, and save velocity models through a user-friendly interface.</p>
         
-        main_layout.addWidget(header_container)
-        main_layout.addWidget(separator)
+        <h2>🖼️ Interface Overview</h2>
+        <p>The application is organized into workflow tabs:</p>
+        <ul>
+            <li><b>Welcome Tab</b> - Overview and getting started</li>
+            <li><b>Load Data Tab</b> - Import SEGY and velocity data files</li>
+            <li><b>Edit Tab</b> - Modify velocity picks and apply corrections</li>
+            <li><b>Interpolate Tab</b> - Apply interpolation methods and save results</li>
+        </ul>
         
-        # Create scroll area with custom styling
+        <h2>🔄 Creating a Velocity Model</h2>
+        <ol>
+            <li><b>Load Data:</b> Import both SEGY and velocity data files
+                <ul>
+                    <li>SEGY file provides seismic data context</li>
+                    <li>Velocity file contains actual velocity picks</li>
+                    <li>Preview imported data on the display</li>
+                </ul>
+            </li>
+            <li><b>Edit (Optional):</b> Modify velocity field points
+                <ul>
+                    <li>Apply time shifts to all velocity picks</li>
+                    <li>Add new velocity picks by clicking on display</li>
+                    <li>Edit or delete existing velocity values</li>
+                    <li>Use Undo/Redo for edit history management</li>
+                </ul>
+            </li>
+            <li><b>Interpolate:</b> Choose from multiple interpolation methods
+                <ul>
+                    <li>Linear Best Fit / Linear Custom</li>
+                    <li>Logarithmic Best Fit / Logarithmic Custom</li>
+                    <li>RBF Interpolation</li>
+                    <li>Two-Step Method</li>
+                </ul>
+            </li>
+            <li><b>Save Results:</b> Export in Text or Binary format</li>
+        </ol>
+        
+        <h2>⚙️ Navigation Controls</h2>
+        <p>Each tab provides navigation tools:</p>
+        <ul>
+            <li><b>Navigation Panel</b> - Switch between workflow stages</li>
+            <li><b>Visualization Toolbar:</b></li>
+            <ul>
+                <li>🏠 <b>Home:</b> Reset view to original display</li>
+                <li>✋ <b>Pan:</b> Left click and drag to move around</li>
+                <li>🔍 <b>Zoom:</b> Left click and drag to zoom into rectangular region</li>
+                <li>💾 <b>Save:</b> Save the figure</li>
+            </ul>
+        </ul>
+        
+        <h2>💾 File Structure</h2>
+        <p>VelRecover organizes data in structured folders:</p>
+        <ul>
+            <li><b>SEGY/</b> - Store SEGY seismic data files</li>
+            <li><b>VELS/</b> - Root folder for velocity data
+                <ul>
+                    <li><b>RAW/</b> - Original velocity data files</li>
+                    <li><b>CUSTOM/</b> - Edited velocity files</li>
+                    <li><b>INTERPOLATED/TXT/</b> - Text format results</li>
+                    <li><b>INTERPOLATED/BIN/</b> - Binary format results</li>
+                </ul>
+            </li>
+        </ul>
+        
+        <h2>📊 Data Formats</h2>
+        <p><b>Input Formats:</b></p>
+        <ul>
+            <li>SEGY files (.segy, .sgy) - Standard seismic data format</li>
+            <li>Velocity data (.dat, .txt) - Delimited text files with trace, time, and velocity columns</li>
+        </ul>
+        <p><b>Output Formats:</b></p>
+        <ul>
+            <li>Text format (.dat) - Delimited text files for interoperability</li>
+            <li>Binary format (.bin) - Compact binary storage</li>
+        </ul>
+        
+        <h2>⚠️ Tips & Troubleshooting</h2>
+        <ul>
+            <li><b>Data Loading</b> - Ensure both SEGY and velocity files are properly formatted</li>
+            <li><b>Editing Mode</b> - Click on canvas to add/edit/delete velocity points</li>
+            <li><b>Interpolation</b> - Try different methods to find best fit for your data</li>
+            <li><b>File Management</b> - Change data directory via File > Set Data Directory</li>
+        </ul>
+        
+        <h2>🔍 Velocity Distribution</h2>
+        <p>Use the "Show Velocity Distribution" button to:</p>
+        <ul>
+            <li>Analyze velocity trends in your data</li>
+            <li>Visualize interpolation results</li>
+            <li>Validate model quality</li>
+        </ul>
+        
+        <hr>
+        <p style="text-align:center;"><i>For more information about velocity modeling and seismic processing.</i></p>
+        """
+        
+        # Create text label with HTML content
+        text = QLabel(msg)
+        text.setWordWrap(True)
+        text.setTextFormat(Qt.RichText)
+        scroll_layout.addWidget(text)
+        
+        # Create scroll area
         scroll_area = QScrollArea()
+        scroll_area.setWidget(scroll)
         scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.NoFrame)
         
-        # Content widget with styled sections
-        content_widget = QWidget()
-        content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(15)
-        content_layout.setContentsMargins(5, 10, 15, 10)  # Adjusted for scrollbar
+        # Create main layout
+        layout = QVBoxLayout(self)
+        layout.addWidget(scroll_area)
         
-        # Introduction section
-        intro_frame = self._create_section_frame()
-        intro_layout = QVBoxLayout(intro_frame)
-        
-        intro_title = QLabel("Introduction")
-        intro_title.setFont(QFont("Arial", 14, QFont.Bold))
-        intro_layout.addWidget(intro_title)
-        
-        intro_text = QLabel(
-            "<p><b>VelRecover</b> is a tool designed to load, edit, interpolate, "
-            "and save velocity fields. This guide will help you use the application effectively.</p>"
-        )
-        intro_text.setTextFormat(Qt.RichText)
-        intro_text.setWordWrap(True)
-        intro_layout.addWidget(intro_text)
-        
-        content_layout.addWidget(intro_frame)
-        
-        # Navigation section
-        nav_frame = self._create_section_frame()
-        nav_layout = QVBoxLayout(nav_frame)
-        
-        nav_title = QLabel("Navigation Controls")
-        nav_title.setFont(QFont("Arial", 14, QFont.Bold))
-        nav_layout.addWidget(nav_title)
-        
-        nav_text = QLabel(
-            "<p>The application provides navigation tools in each tab:</p>"
-            "<h4 style='margin-top: 10px; margin-bottom: 6px;'>Navigation Panel</h4>"
-            "<p>Use the left-side navigation panel to switch between the main workflow stages.</p>"
-            "<h4 style='margin-top: 10px; margin-bottom: 6px;'>Visualization Toolbar</h4>"
-            "<ul style='margin-top: 0px;'>"
-            "<li>🏠 <b>Home:</b> Reset view to original display</li>"
-            "<li>✋ <b>Pan:</b> Left click and drag to move around</li>"
-            "<li>🔍 <b>Zoom:</b> Left click and drag to zoom into a rectangular region</li>"
-            "<li>💾 <b>Save:</b> Save the figure</li>"
-            "</ul>"
-            "<p>In edit mode, you can click on the canvas to add, edit, or delete velocity points.</p>"
-        )
-        nav_text.setTextFormat(Qt.RichText)
-        nav_text.setWordWrap(True)
-        nav_layout.addWidget(nav_text)
-        
-        content_layout.addWidget(nav_frame)
-        
-        # Workflow section
-        workflow_frame = self._create_section_frame()
-        workflow_layout = QVBoxLayout(workflow_frame)
-        
-        workflow_title = QLabel("VelRecover Workflow")
-        workflow_title.setFont(QFont("Arial", 14, QFont.Bold))
-        workflow_layout.addWidget(workflow_title)
-        
-        workflow_text = QLabel(
-            "<p>The application follows a step-by-step process through a series of tabs:</p>"
-            
-            "<h4 style='margin-top: 15px; margin-bottom: 6px;'>Welcome Tab</h4>"
-            "<ul style='margin-top: 0px;'>"
-            "<li>Overview of VelRecover features</li>"
-            "<li>Click \"Start New Velocity Field\" to begin</li>"
-            "<li>Access help and about information</li>"
-            "</ul>"
-            
-            "<h4 style='margin-top: 15px; margin-bottom: 6px;'>1. Load Data Tab</h4>"
-            "<ul style='margin-top: 0px;'>"
-            "<li>Load both a SEGY file and a velocity data file</li>"
-            "<li>The SEGY file provides the seismic data context</li>"
-            "<li>The velocity file contains the actual velocity picks</li>"
-            "<li>Preview the imported data on the display</li>"
-            "<li>Click \"Show Velocity Distribution\" to analyze velocity trends</li>"
-            "<li>Click \"Next\" to proceed to the Edit tab</li>"
-            "</ul>"
-            
-            "<h4 style='margin-top: 15px; margin-bottom: 6px;'>2. Edit Tab</h4>"
-            "<ul style='margin-top: 0px;'>"
-            "<li>View and modify velocity field points</li>"
-            "<li>Time Shift: Apply time shift to all velocity picks</li>"
-            "<li>Custom Velocity Picks:</li>"
-            "<ul>"
-            "<li><b>New:</b> Add new velocity picks by clicking on the display</li>"
-            "<li><b>Edit:</b> Modify existing velocity values</li>"
-            "<li><b>Delete:</b> Remove unwanted velocity picks</li>"
-            "</ul>"
-            "<li>History: Use Undo/Redo buttons to manage your edits</li>"
-            "<li>Click \"Save Edits\" to save your changes</li>"
-            "<li>Or \"Continue Without Edits\" to proceed without saving</li>"
-            "<li>Click \"Next\" to go to the Interpolation tab</li>"
-            "</ul>"
-            
-            "<h4 style='margin-top: 15px; margin-bottom: 6px;'>3. Interpolation Tab</h4>"
-            "<ul style='margin-top: 0px;'>"
-            "<li>Choose from multiple interpolation methods:</li>"
-            "<ul>"
-            "<li>Linear Best Fit</li>"
-            "<li>Linear Custom</li>"
-            "<li>Logarithmic Best Fit</li>"
-            "<li>Logarithmic Custom</li>"
-            "<li>RBF Interpolation</li>"
-            "<li>Two-Step Method</li>"
-            "</ul>"
-            "<li>Configure method-specific parameters</li>"
-            "<li>Optional: Apply Gaussian Blur for smoothing</li>"
-            "<li>Click \"Run Interpolation\" to execute the selected method</li>"
-            "<li>Click \"Reset\" to undo interpolation and try a different method</li>"
-            "<li>View velocity distribution with the \"Show Velocity Distribution\" button</li>"
-            "<li>Save interpolation results in Text or Binary format</li>"
-            "</ul>"
-        )
-        workflow_text.setTextFormat(Qt.RichText)
-        workflow_text.setWordWrap(True)
-        workflow_layout.addWidget(workflow_text)
-        
-        content_layout.addWidget(workflow_frame)
-        
-        # File Structure section
-        file_frame = self._create_section_frame()
-        file_layout = QVBoxLayout(file_frame)
-        
-        file_title = QLabel("File Structure")
-        file_title.setFont(QFont("Arial", 14, QFont.Bold))
-        file_layout.addWidget(file_title)
-        
-        file_text = QLabel(
-            "<p>VelRecover organizes data in the following folders:</p>"
-            "<ul>"
-            "<li><b>SEGY/</b>: Store SEGY seismic data files</li>"
-            "<li><b>VELS/</b>: Root folder for velocity data</li>"
-            "<ul>"
-            "<li><b>VELS/RAW/</b>: Original velocity data files</li>"
-            "<li><b>VELS/CUSTOM/</b>: Edited velocity files</li>"
-            "<li><b>VELS/INTERPOLATED/TXT/</b>: Text format interpolation results</li>"
-            "<li><b>VELS/INTERPOLATED/BIN/</b>: Binary format interpolation results</li>"
-            "</ul>"
-            "</ul>"
-            "<p>You can change the data directory in File > Set Data Directory.</p>"
-        )
-        file_text.setTextFormat(Qt.RichText)
-        file_text.setWordWrap(True)
-        file_layout.addWidget(file_text)
-        
-        content_layout.addWidget(file_frame)
-        
-        # Data Formats section
-        format_frame = self._create_section_frame()
-        format_layout = QVBoxLayout(format_frame)
-        
-        format_title = QLabel("Data Formats")
-        format_title.setFont(QFont("Arial", 14, QFont.Bold))
-        format_layout.addWidget(format_title)
-        
-        format_text = QLabel(
-            "<p><b>Input Formats:</b></p>"
-            "<ul>"
-            "<li>SEGY files (.segy, .sgy): Standard seismic data format</li>"
-            "<li>Velocity data (.dat, .txt): Tab, comma, or space-delimited text files with columns for trace, time, and velocity</li>"
-            "</ul>"
-            "<p><b>Output Formats:</b></p>"
-            "<ul>"
-            "<li>Text format (.dat): Delimited text files for interoperability</li>"
-            "<li>Binary format (.bin): Compact binary storage of velocity data</li>"
-            "</ul>"
-        )
-        format_text.setTextFormat(Qt.RichText)
-        format_text.setWordWrap(True)
-        format_layout.addWidget(format_text)
-        
-        content_layout.addWidget(format_frame)
-        
-        # Add spacer at the bottom
-        content_layout.addStretch()
-        
-        # Set the content widget in the scroll area
-        scroll_area.setWidget(content_widget)
-        main_layout.addWidget(scroll_area, 1)  # 1 = stretch factor
-        
-        # Button section
-        button_container = QWidget()
-        button_layout = QHBoxLayout(button_container)
-        button_layout.setContentsMargins(0, 10, 0, 0)
-        
-        button_layout.addStretch()
-        
-        close_button = QPushButton("Close")
-        close_button.setFixedSize(100, 32)
-        close_button.clicked.connect(self.accept)
-        button_layout.addWidget(close_button)
-        
-        main_layout.addWidget(button_container)
-    
-    def _create_section_frame(self, bg_color="#ffffff"):
-        """Create a styled frame for a help section."""
-        frame = QFrame()
-        return frame
+        # Add OK button at bottom
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok)
+        buttons.accepted.connect(self.accept)
+        layout.addWidget(buttons)
