@@ -155,7 +155,10 @@ Your velocity model will be saved in the `VELS/INTERPOLATED/` folder and can be 
 
 ### Step 1: Loading Velocity Data
 
-1. From the Welcome screen, click **"Start New Project"**
+![VelRecover Load Data Tab](images/vel_load.png)
+*Window for loading velocity data and SEGY files*
+
+1. From the Welcome screen, click **"New Velocity Field"** button
 2. In the **Load Data** tab:
    - Click **"Load SEGY File"** to provide spatial context for the interpolation
    - Click **"Load Text File"** to select your velocity data file (formats: .dat, .txt, .tsv, .csv)
@@ -163,11 +166,17 @@ Your velocity model will be saved in the `VELS/INTERPOLATED/` folder and can be 
    - Click **"Show Velocity Distribution"** to visualize the distribution of velocity values
    - Click **"Next"** to proceed to the Edit tab
 
-> **Note**: The velocity distribution plot shows velocity values vs two-way-time for each trace or CDP, helping identify outliers or trends in the data.
+![VelRecover Distribution Plot](images/vel_distribution.png)
+*Velocity distribution plot showing the velocity values vs two-way-time for each trace or CDP in the text file*
+
+> **Note**: Click the **"Show Velocity Distribution"** button to visualize the distribution of velocity values in your data. This can help identify outliers or trends in the data.
 
 ### Step 2: Editing Velocity Data
 
-In this step, you'll review and edit your velocity data to remove outliers or incorrect velocity picks:
+![VelRecover Edit Tab](images/vel_edit.png)
+*Data editing interface for cleaning velocity data. New picks have been added at the seismic section bottom.*
+
+In this step, you'll review and edit your velocity data to remove outliers or incorrect velocity picks. You can also add new picks to improve the accuracy of the model:
 
 1. **Apply Time Shift**: Click to shift all velocity picks along the time axis
 2. **Edit Pick**: Select a pick and modify its velocity value
@@ -181,6 +190,9 @@ In this step, you'll review and edit your velocity data to remove outliers or in
 > **Tip**: Adding picks at depth intervals where velocity changes significantly improves interpolation accuracy.
 
 ### Step 3: Interpolation
+
+![VelRecover Interpolation Tab](images/vel_interpolation.png)
+*Interpolation interface showing the velocity field visualization*
 
 Configure and run the interpolation to generate a complete velocity field:
 
@@ -207,8 +219,10 @@ Configure and run the interpolation to generate a complete velocity field:
 5. **Review Results**: The velocity field displays as a color-coded grid
 
 6. **Export Results**:
-   - **"Save as Text"**: CSV format with CDP, TWT, Velocity values
-   - **"Save as Binary"**: Binary grid (float32) for Seismic Unix
+   - **"Save Data as TXT"**: Exports as a text file with X, Y coordinates and CDP, TWT, Velocity values
+   - **"Save Data as BIN"**: Exports in binary format (float32) as a velocity grid (TWT, CDP)
+
+> **Note**: Binary format (.bin) is suitable for direct import into Seismic Unix for migration processing. Text format (.txt) can be imported into most interpretation software.
 
 ### Step 4: Results and Export
 
