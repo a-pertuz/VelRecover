@@ -136,7 +136,7 @@ The application automatically creates these folders if they don't exist.
 
 </details>
 
-<details open>
+<details>
 <summary><h2>🚀 Quick Start (6 Steps)</h2></summary>
 
 1. **Launch** → Run `velrecover` and click "Start New Project"
@@ -150,7 +150,7 @@ Your velocity model will be saved in the `VELS/INTERPOLATED/` folder and can be 
 
 </details>
 
-<details open>
+<details>
 <summary><h2>📚 Complete Tutorial</h2></summary>
 
 ### Step 1: Loading Velocity Data
